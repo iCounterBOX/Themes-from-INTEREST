@@ -14,7 +14,7 @@ Themes of Interest - my TOI section
 
 ..topics like THIS:
 
-![grafik](https://user-images.githubusercontent.com/37293282/55775599-1678f500-5a9a-11e9-803c-4eb5b7d795b1.png)
+![grafik](https://user-images.githubusercontent.com/37293282/55777588-a02bc100-5aa0-11e9-8632-511d1001f695.png)
 
 https://github.com/iCounterBOX/Themes-from-INTEREST/wiki
 
