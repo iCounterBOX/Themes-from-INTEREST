@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+  <title>TSFL.js Tests object Detection </title>
+  
+  
+  <style>
+  
+.container {
+  margin: 0 auto;
+  position: relative;
+}
+
+.video {  
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.canvas {
+  position: absolute;  
+  top: 0;
+  left: 0;
+  z-index: 10;
+  background-color:rgba(255,0,0,0.5);
+}
+    
+  </style>
+  
+    
+</head>
+
+<body>   
+  
+	<div class="container">
+		<video class="video" id="myvideo" autoplay width="500" height="600" onplay="resize_canvas(this)" ></video>		
+		<canvas class="canvas" id="myCanvas"></canvas>
+	</div>
+  
+    
+  <script src="jslib/tf.min.js"></script>	
+  <script src="jslib/coco-ssd.js"></script>	
+  
+    
+  <script>
+
+/*
+  Großes issue mit der darstellung von Video UND canvas...ging erst NICHT übernander darzustellen. NUR Nebeneinander.
+  ABHILFE: https://stackoverflow.com/questions/39671568/how-do-i-overlay-a-canvas-over-a-video
+  
+  Im Browser ist nun die webCam....Und DARÜBER im Canvas die DETECTION - BRAVO
+  
+  Lean:
+   src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> 
+   src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"> 
+   
+  Die tf.min.js.map  soll im selben Verzeichnis sein wie tf.min.js !!
+  
+  Mülleimer: 
+  
+  
+*/
+  
+function resize_canvas(element)
+{
+  var w = element.offsetWidth;
+  var h = element.offsetHeight;
+  var cv = document.getElementById("myCanvas");
+  cv.width = w;
+  cv.height = h;
+
+}
+
+const video = document.getElementById("myvideo");
+const canvas = document.getElementById("myCanvas");
+const ctx = canvas.getContext('2d');
+
+let isVideo = false;
+let model = null;
+
+
+
+// Load the model.
+cocoSsd.load().then(lmodel => {	
+    // detect objects in the image.
+    model = lmodel
+           
+});
+
+
+detectFrame = (video, model) => {
+    model.detect(video).then(predictions => {
+      this.renderPredictions(predictions);
+      requestAnimationFrame(() => {
+        this.detectFrame(video, model);
+      });
+    });
+  };
+
+
+ 
+// von hier: https://medium.com/@erdemisbilen/building-realtime-object-detection-webapp-with-tensorflow-js-and-angular-a4ff5062bdf1
+
+function startVideoX()
+{
+  this.video = document.getElementById("myvideo");
+  navigator.mediaDevices.getUserMedia({
+  audio: false,
+  video: {facingMode: "user",}
+  })
+  .then(stream => {
+		this.video.srcObject = stream;
+		this.video.onloadedmetadata = () => {
+			this.video.play();
+			isVideo = true;
+            detectFrame(video, model);
+		};
+  });
+}
+
+function startVideoXX()
+{
+	
+	navigator.mediaDevices.getUserMedia({
+		video: true,
+		audio:false		
+	}, function(stream) {
+		this.video.srcObject = stream;
+		this.video.onloadedmetadata = () => {
+			this.video.play();
+			isVideo = true;
+            detectFrame(video, model);
+		}
+	}, function(error) {
+		// error
+	});	
+	
+}
+
+
+
+if (!isVideo) {
+         startVideoX();
+}
+
+//  check this :  https://github.com/tensorflow/tfjs-examples/blob/master/simple-object-detection/index.js
+
+renderPredictions = predictions => {
+							
+							
+							ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                            // Font options.
+                            const font = "16px sans-serif";
+                            ctx.font = font;
+                            ctx.textBaseline = "top";
+                            predictions.forEach(prediction => {
+                                const x = prediction.bbox[0];
+                                const y = prediction.bbox[1];
+                                const width = prediction.bbox[2];
+                                const height = prediction.bbox[3];
+                                // Draw the bounding box.
+                                ctx.strokeStyle = "#00FFFF";
+                                ctx.lineWidth = 4;
+                                ctx.strokeRect(x, y, width, height);
+                                // Draw the label background.
+                                ctx.fillStyle = "#00FFFF";
+                                const textWidth = ctx.measureText(prediction.class).width;
+								 console.log("found: ", prediction.class);
+                                const textHeight = parseInt(font, 10); // base 10
+                                ctx.fillRect(x, y, textWidth + 4, textHeight + 4);
+                            });
+                        
+                            predictions.forEach(prediction => {
+                                const x = prediction.bbox[0];
+                                const y = prediction.bbox[1];
+                                // Draw the text last to ensure it's on top.
+                                ctx.fillStyle = "#000000";
+                                ctx.fillText(prediction.class, x, y);
+                            });	
+
+	 };
+
+
+</script>
+  
+</body>
+
+</html>
