@@ -1,0 +1,402 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>openCV+Target+Conture+WebCam</title>
+<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			canvas {
+				border: 1px solid black;
+				background:transparent;
+			}
+				.invisible {
+					display: none;
+				}
+.text-center {
+  text-align: center;
+}
+.center-block {
+  display: block;
+  margin: auto;
+}
+.row {
+  margin: 1px;
+}
+tr td {
+  padding-right: 10px;
+  width: 25%;
+  vertical-align: top;
+  font: 14px 'Lucida Grande', sans-serif;
+}
+
+		</style>
+</head>
+<body>
+<h2>openCV+Target+Conture+WebCam+threeJS</h2>
+
+
+<div style="position: relative;">
+ <canvas id="canvasOutput" width="500" height="500" 
+   style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+ <canvas id="threeJScanvasOutput" width="500" height="500" 
+   style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+</div>
+
+<div id="container">
+  <table cellpadding="0" cellspacing="0" width="100%" border="0">
+    <tr>
+      <td></td>
+      <td>
+        <div class="text-center">
+          <span>Current Filter: </span><span id="filterName">Pass Through</span>
+        </div>
+      </td>
+      <td>
+        <div>Select Filter:</div>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>
+        
+      </td>
+      <td>
+        <div id="guiContainer"></div>
+      </td>
+      <td></td>
+    </tr>
+  </table>
+  <div class="invisible">
+    <video id="video" class="hidden">Your browser does not support the video tag.</video>
+  </div>
+</div>
+
+
+
+
+
+
+ <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+ <script type="text/javascript" src="jslib/platformOverrides.js"></script>
+ <script type="text/javascript" src="jslib/Three.js"></script>      
+ <script src="jslib/OrbitControls.js"></script>
+ <script src="jslib/DragControls.js"></script>	
+ <script src="jslib/dat.gui.min.js"></script>
+ <script src="jslib/stats.min.js"></script>
+ <script src="jslib/opencv.js" ></script>
+
+
+<script type="text/javascript">
+
+
+/*
+
+Hier soll das webCam Video gescannt werden!!
+
+canvas OVERlay OK: https://stackoverflow.com/questions/3008635/html5-canvas-element-multiple-layers
+
+
+*/
+
+let width = 500;
+let height = 0;
+
+let _pWidth = width;  // the post width AFTER the new calc see below from this video..
+let _pHight = 0;
+
+// whether streaming video from the camera.
+let streaming = false;
+
+let video = document.getElementById("video");
+let stream = null;
+let vc = null;
+
+var contoursStartTime = Date.now();
+
+function startCamera() {
+  if (streaming) return;
+  navigator.mediaDevices.getUserMedia({video: true, audio: false})
+    .then(function(s) {
+    stream = s;
+    video.srcObject = s;
+    video.play();
+  })
+    .catch(function(err) {
+    console.log("An error occured! " + err);
+  });
+
+  video.addEventListener("canplay", function(ev){
+    if (!streaming) {
+      height = video.videoHeight / (video.videoWidth/width);
+      video.setAttribute("width", width);
+      video.setAttribute("height", height);		 	 	  
+	  // hier kommt die unterschiedliche höhe her???   MUSS das sein??
+	  // andere ..feste werte  zb 500 500  da ging der stream garnicht!!
+	  console.log("video.videoHeight: " + video.videoHeight + " video.videoWidth/width = " + video.videoWidth/width + " height(Final) = " + height);
+      console.log("video width (fix value): " + width );
+	  
+	  _pWidth = width;  // dies ist das CANVAS für openCV und openCV-webCam
+	  _pHight = height;  // diese werte muss auch threeJS CANVAS bekommen
+	  console.log("new global _pWidth: " + _pWidth + " _pHight = " + _pHight);
+	  
+	  streaming = true;
+      vc = new cv.VideoCapture(video);
+    }
+    startVideoProcessing();
+  }, false);
+}
+
+let lastFilter = '';
+let srcV = null;
+let dstC1 = null;
+let dstC3 = null;
+let dstC4 = null;
+let srcRGB = null;
+
+
+
+function startVideoProcessing() {
+  if (!streaming) { console.warn("Please startup your webcam"); return; }
+  stopVideoProcessing();
+  srcV = new cv.Mat(height, width, cv.CV_8UC4);
+  dstC1 = new cv.Mat(height, width, cv.CV_8UC1);
+  dstC3 = new cv.Mat(height, width, cv.CV_8UC3);
+  dstC4 = new cv.Mat(height, width, cv.CV_8UC4);  
+  requestAnimationFrame(processVideo);
+}
+
+function processVideo() {  
+  vc.read(srcV); 
+  //let result = contours(srcV);
+  //cv.imshow("canvasOutput", result);
+  if ((Date.now() - contoursStartTime) > 2000)  {  
+   cv.imshow("canvasOutput", contoursArroundBullets(srcV));
+   
+   contoursStartTime = Date.now();
+  }
+  
+  requestAnimationFrame(processVideo);
+}
+
+function stopVideoProcessing() {
+  if (srcV != null && !srcV.isDeleted()) srcV.delete();
+  if (dstC1 != null && !dstC1.isDeleted()) dstC1.delete();
+  if (dstC3 != null && !dstC3.isDeleted()) dstC3.delete();
+  if (dstC4 != null && !dstC4.isDeleted()) dstC4.delete();
+}
+
+function stopCamera() {
+  if (!streaming) return;
+  stopVideoProcessing();
+  document.getElementById("canvasOutput").getContext("2d").clearRect(0, 0, width, height);
+  video.pause();
+  video.srcObject=null;
+  stream.getVideoTracks()[0].stop();
+  streaming = false;
+}
+
+let contoursColor = [];
+for (let i = 0; i < 10000; i++) {
+  contoursColor.push([Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255), 0]);
+}
+
+function contours(src) {
+  cv.cvtColor(src, dstC1, cv.COLOR_RGBA2GRAY);
+  cv.threshold(dstC1, dstC4, 120, 200, cv.THRESH_BINARY);
+  let contours  = new cv.MatVector();
+  let hierarchy = new cv.Mat();
+  cv.findContours(dstC4, contours, hierarchy, Number(cv.RETR_CCOMP), Number(cv.CHAIN_APPROX_SIMPLE), {x: 0, y: 0});
+  dstC3.delete();
+  dstC3 = cv.Mat.ones(height, width, cv.CV_8UC3);
+  
+  for (let i = 0; i<contours.size(); ++i)
+  {
+    let color = contoursColor[i];
+    cv.drawContours(dstC3, contours, i, color, 1, cv.LINE_8, hierarchy);
+  }
+  contours.delete(); hierarchy.delete();
+  return dstC3;
+}
+
+function contoursArroundBullets(src){
+    
+	//let src = cv.imread('imageSrc');
+	//die konturen kommen nur in weiß...lösung?: https://stackoverflow.com/questions/13441873/opencv-draw-color-contours-on-greyscale-image
+	//need a 3-channel (RGB) image
+	//https://stackoverflow.com/questions/55231523/why-is-canny-different-in-python-opencv-and-opencv-js
+	
+	let srcGray = new cv.Mat();
+	cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+	if (srcRGB != null && !srcRGB.isDeleted()) srcRGB.delete();
+	srcRGB = new cv.Mat();// DAS war der hinweis ..farben ok jetzt!! https://stackoverflow.com/questions/13441873/opencv-draw-color-contours-on-greyscale-image
+	cv.cvtColor(srcGray, srcRGB, cv.COLOR_GRAY2RGB);
+		
+	
+	let dst = new cv.Mat();
+	let dstx = new cv.Mat();	
+	let dstc = cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);  // contours
+
+	// der passt !! https://docs.opencv.org/3.4.1/db/d64/tutorial_js_colorspaces.html
+	
+	//color picker mit MAUS: https://www.colorcodepicker.com/?pn=zielScheibe_Cam1.jpg
+	let low = new cv.Mat(src.rows, src.cols, src.type(), [78, 76, 77, 0]);
+	let high = new cv.Mat(src.rows, src.cols, src.type(), [152, 145, 141, 255]);
+	// You can try more different parameters
+	cv.inRange(src, low, high, dst);
+	//cv.imshow('canvasOutput', dst);
+	
+	//Passt: https://docs.opencv.org/3.4/d4/d76/tutorial_js_morphological_ops.html
+	//gibt die weißen punkte auf schwarzem grund
+	let M = cv.Mat.ones(5, 5, cv.CV_8U);		
+	let anchor = new cv.Point(-1, -1);	
+	let opening = cv.morphologyEx(dst, dstx, cv.MORPH_OPEN, M, anchor, 1, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
+	//cv.imshow('canvasOutput', dstx);
+	
+	
+	let contours = new cv.MatVector();
+	let hierarchy = new cv.Mat();
+	cv.findContours(dstx, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
+	
+	let circle = 0;
+	let x = 0;
+	let y = 0;
+	
+	// draw contours with random Scalar
+	for (let i = 0; i < contours.size(); ++i) {
+		let cnt = contours.get(i);
+		circle = cv.minEnclosingCircle(cnt);
+		x = circle.center.x;
+		y = circle.center.y;
+		let radius = circle.radius;
+		let area = cv.contourArea(cnt);
+    // if area<400....https://stackoverflow.com/questions/19727435/python-opencv-trouble-detecting-tiny-holes-circles
+        
+		
+		//console.log("x = " + x + "   y = " + y + " Radius = " + radius + " Area = " + area );		
+		// die kreise müssen mindestgr haben
+		if ( radius > 4 ) {
+		  let color = new cv.Scalar(Math.round(Math.random() * 255), Math.round(Math.random() * 255),  Math.round(Math.random() * 255));
+		  //let color = new cv.Scalar(0, 0, 255);		
+		  cv.drawContours(srcRGB, contours, i, color, 2, cv.LINE_8, hierarchy, 100);
+		}  
+	}
+	//        cv.imshow('canvasOutput', srcRGB);
+		
+	 dst.delete(); dstx.delete(); dstc.delete(); low.delete(); high.delete(); M.delete(); ; hierarchy.delete(); contours.delete();
+   
+//just a test:
+
+   //box1.position.set(x,y,3);
+	
+	return srcRGB;
+}
+
+// threeJS definitions and Functions
+
+//var width = window.innerWidth, height = window.innerHeight / 2;
+
+
+var camera, scene, renderer, geometry, texture, mesh;
+var plane;
+var box1;
+var clock = new THREE.Clock();
+
+
+function init() {
+
+    scene = new THREE.Scene();
+	camera = new THREE.PerspectiveCamera(50, 500 / 500, 0.1, 1000);
+	scene.add(camera);
+	
+//var renderer = new THREE.WebGLRenderer();
+	renderer = new THREE.WebGLRenderer( { canvas: threeJScanvasOutput, alpha: true } );
+	renderer.setSize(500, 234);
+	
+	
+    var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+	var material = new THREE.MeshNormalMaterial();
+	box1 = new THREE.Mesh( geometry, material );
+	scene.add( box1 );	
+	box1.position.set(2,0,5);
+	camera.position.z = 10;
+	
+		
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	
+	window.addEventListener('resize', onWindowResize, false);
+	
+}
+
+function onWindowResize() {
+            camera.aspect = _pWidth / _pHight;
+            camera.updateProjectionMatrix();
+            //renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.setSize(_pWidth, _pHight);
+        }
+
+var SPEED = 0.01;
+
+function rotateCube() {
+    //box1.rotation.x -= SPEED * 2;
+    box1.rotation.y -= SPEED;
+	
+    //box1.rotation.z -= SPEED * 3;
+}
+
+function resizeCanvasToDisplaySize() {
+  const canvas = renderer.domElement;
+  // look up the size the canvas is being displayed
+  const width = canvas.width;
+  const height = canvas.height;
+
+  // adjust displayBuffer size to match
+	if (_pWidth > 0 && _pHight > 0) {
+		if (_pWidth !== width || _pHight !== height) {
+			// you must pass false here or three.js sadly fights the browser
+			onWindowResize();
+			var ca = document.getElementById('threeJScanvasOutput');
+	    	ca.width = _pWidth;
+			ca.height = _pHight;		    
+			// update any render target sizes here
+        }
+	}	  
+}
+
+function animate() {
+    requestAnimationFrame(animate);  
+   
+    var elapsed = clock.getElapsedTime();
+	rotateCube(); 						
+	controls.update();	
+	resizeCanvasToDisplaySize();	
+    renderer.render(scene, camera);
+}
+
+
+//openCV ready ...then we inititialize the rest and start
+
+
+cv['onRuntimeInitialized']=()=>{
+
+//VIDEO - Part
+	 console.log('OpenCV.js is ready');  
+     
+	 init();
+	 animate();
+	 startCamera();
+	 contoursStartTime = Date.now();	
+	
+};
+
+
+
+</script>
+
+</body>
+</html>
+
+
