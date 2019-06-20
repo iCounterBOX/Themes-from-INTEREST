@@ -534,7 +534,7 @@ state: is working but not so good for details..main parameter is threshold and d
 function motionDetector_1(){  
     try {
 
-        document.getElementById("filterQueue").innerHTML =  "FRAME1+2 > absDIFF > gaussianBLUR > THRESHOLD > DILATION > CONTOURS";
+        document.getElementById("filterQueue").innerHTML =  "FRAME1+2 > absDIFF > gaussianBLUR > THRESHOLD > EROSION  >  DILATION > CONTOURS";
         let _text = 'Unoccupied';
 
         let contours = new cv.MatVector();
