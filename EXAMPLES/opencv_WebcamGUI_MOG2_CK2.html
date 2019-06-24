@@ -87,7 +87,7 @@
     <tr>     
       <td>
         <div class="text-center">
-          <span>canvasOriginal + Contours: </span><span id="filterName1">----</span>
+          <span>canvasOriginal + Contours: </span><span id="filterName">----</span>
         </div>
       </td>
       <td>
@@ -161,6 +161,14 @@
             <tr>
               <td>MORPHOLOGY</td>
               <td id="morphology">M_Type = x M_Shape = y BoarderType = y</td>
+            </tr>
+            <tr>
+              <td>Gaussian BLUR</td>
+              <td id="gaussian_blur">-</td>
+            </tr>
+            <tr>
+              <td>THRESHOLD</td>
+              <td id="threshold">-</td>
             </tr>
             <tr>
               <td>STATE(run)</td>
@@ -523,7 +531,200 @@ function morphology(src) {
   return dstC4;
 }
 
+
+/*
+CHECK THE INTERSECTION OF 2 LINES
+https://www.desmos.com/calculator/zsqc77gq9v
+
+Line1:  y-y1 = m1 (x-x1)  ->  m1 = (y2-y1)/(x2-x1)
+Line2:  y-y3 = m2 (x-x3)  ->  m2 = (y4-y4)/(x4-x3)
+
+BoderLine: x1,y1, x2,y2
+
+Moving-Object-Line: x3,y3, x4,y4
+
+!!! Is working but would need to check if the lines are within my coordinates 
+
+*/
+
+function checkIntersection( x1,y1, x2,y2, x3,y3, x4,y4  )
+{
+  var intersec = [];
+
+    try{
+
+      // we are only interested in intersec within the ParkingLot Dimensions ( BoarderLine-Len HAND drawn) and the Car dimension
+      if (x3 >= x1 && x4 <= x2){
+
+        var l1 = (y2-y1)/(x2-x1);
+        var l2 = (y4-y3)/(x4-x3);
+        var c1 = y1 - (l1*x1);
+        var c2 = y3 - (l2*x3);
+        var x = (c2-c1)/(l1-l2);  // X
+        var y = l1 * x + c1;  // Y
+
+      console.log("checkIntersection) / iSect_X= " + x.toFixed(1) +  " iSect_Y= " + y.toFixed(1)   );
+      }    
+    } catch (err) {
+            console.error("EXCEPTION / checkIntersection(): " + err);
+        }    
+}
+
+/*
+No clue how this is working...found on stackOverflow - but is working like charme
+Return true/false if an intersection was made
+
+*/
+
+function checkIntersection_V2(a,b,c,d,p,q,r,s) {
+
+  try{
+      var det, gamma, lambda;
+      det = (c - a) * (s - q) - (r - p) * (d - b);
+      if (det === 0) {
+        return false;
+      } else {
+        lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+        gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+        return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+      }
+  } catch (err) {
+            console.error("EXCEPTION / checkIntersection2(): " + err);
+        }  
+
+  
+};
+
+
 // CK: SPECIAL Functions
+
+/*
+MOTION-Detection & Intersection:
+formula for intersection ( 2 Lines ): https://www.desmos.com/calculator/zsqc77gq9v
+
+Line:
+https://docs.opencv.org/3.4/dc/dcf/tutorial_js_contour_features.html
+https://docs.opencv.org/3.4/d5/daa/tutorial_js_contours_begin.html
+
+*/
+
+var carIsIn = false;
+
+function motionDetectorIntersected(){  
+    try {
+
+        document.getElementById("filterQueue").innerHTML =  "FRAME1+2 > absDIFF > gaussianBLUR > THRESHOLD > EROSION  >  DILATION > CONTOURS";
+        let _text = 'Parking Detection';
+
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        let greyscale_frame = new cv.Mat(video.height, video.width, cv.CV_8UC1);  
+        let frame_delta = new cv.Mat();  
+
+        // tricky..erst auf grau ..dann auf rgb ..nur so bekomme ich farbige konturen??
+        cv.cvtColor(frame1, srcRGB, cv.COLOR_RGBA2GRAY);
+        cv.cvtColor(srcRGB, srcRGB, cv.COLOR_GRAY2RGB);
+
+        //Und los geht die filterei
+            
+        cv.absdiff(frame1, frame2, frame_delta);  //  https://answers.opencv.org/question/184025/detecting-change-in-previous-and-current-image-frame/       
+        cv.cvtColor(frame_delta, dstC1, cv.COLOR_RGBA2GRAY, 0);
+        
+        // nicht gut cv.adaptiveThreshold(dstC1, dstC1, 200, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, Number(controls.adaptiveBlockSize), 2);
+
+        gaussianBlur(dstC1); // gaussianBlur in  dstC1          
+        threshold(dstC1); // threshold in dstC4        
+       
+        erosion(dstC4); // >> dstC4
+        cv.imshow('canvasAfterThisFilterStepp', dstC4);
+        dilation(dstC4);  // >>  dstC4   
+              
+
+
+        //DRAW Limes-Line if there is one...currently we only take ONE
+        
+        for (var i = 0; i < existingLines.length; ++i) {
+					  var line = existingLines[i];
+            drawLine(srcRGB, line.startX, line.startY, line.endX, line.endY);
+            //console.log("draw() / line.startX= " + line.startX.toFixed(0) +  " line.startY= " + line.startY.toFixed(0)  + " line.endX= " + line.endX.toFixed(0) + " line.endY= " + line.endY.toFixed(0)  );
+	      }
+
+        //contours
+        	
+        cv.findContours(dstC4, contours, hierarchy, Number(controls.contoursMode), Number(controls.contoursMethod), {x: 0, y: 0});
+        // Draw the rectangle  
+        let largestArea = 0;        
+        let li = 0;
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);	    
+            let a = cv.contourArea(cnt);
+
+            if ( a > largestArea ){   // get the biggest contour
+              largestArea = a;
+              li = i;
+             
+            }               
+            cnt.delete();
+        }
+        if (largestArea > 800) {
+          let rect = cv.boundingRect(contours.get(li));
+          let contoursColor = new cv.Scalar(0, 255, 0);
+          let rectangleColor = new cv.Scalar(255, 255, 0);        
+          //cv.drawContours(srcRGB, contours, 0, contoursColor, 1, 8, hierarchy, 100);  // <- BESSER..macht nur die äußere kontur ( Hand )  ( //cv.drawContours(srcRGB, contours, -1, contoursColor, 1, cv.LINE_8); // <- UNGÜNSTG - macht auch die querverbindungen  )
+          let point1 = new cv.Point(rect.x, rect.y);
+          let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+          cv.rectangle(srcRGB, point1, point2, rectangleColor, 2, cv.LINE_AA, 0);
+          cv.line(srcRGB, point1, point2, rectangleColor , 2, cv.LINE_AA, 0);
+          _text = 'Parking Detection';    // text that appears when there is motion in video feed  
+          cv.putText(srcRGB, largestArea.toString(), {x: rect.x+0,  y: rect.y+20}, cv.FONT_HERSHEY_SIMPLEX, 0.5, [255, 0, 0, 255]);    
+
+          //Check if there is an intersection - And a little LOGIC if this LOT is FREE
+
+          if (  existingLines.length == 2)  {
+              //check if Car is IN the lot..is driving into the LOT
+              var line = existingLines[1];    // this is the line IN the parking Lot
+              var inter = checkIntersection_V2(line.startX, line.startY, line.endX, line.endY, rect.x, rect.y,rect.x + rect.width, rect.y + rect.height );
+              if (inter == true && carIsIn == false ){
+                console.log("checkIntersection_V2()) / PARKING LOT IS NOT FREE"  );
+                carIsIn = true;              
+              }
+
+              line = existingLines[0];    // this is the line we MUST cross when dring OUT of the ParkingLot
+              var inter = checkIntersection_V2(line.startX, line.startY, line.endX, line.endY, rect.x, rect.y,rect.x + rect.width, rect.y + rect.height );
+              if (inter == true && carIsIn == true){
+                console.log("checkIntersection_V2()) / PARKING LOT is FREE"  );
+                carIsIn = false;              
+              }             
+          } 
+
+        }    
+        
+        if (carIsIn == true && existingLines.length == 2) cv.putText(srcRGB, "NOT FREE", {x: existingLines[1].startX, y: existingLines[1].startY +20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);
+        if (carIsIn == false && existingLines.length == 2) cv.putText(srcRGB, "FREE", {x: existingLines[1].startX, y: existingLines[1].startY+20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);          
+        
+        //put some text beside the bounding BOX:
+
+        cv.putText(srcRGB, _text, {x: 10, y: 20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);
+        cv.putText(srcRGB, getDateTime(), {x: 10, y: height-10}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 0, 255, 255]);
+
+        cv.imshow("canvasOriginal",srcRGB);  // Original mit contours
+        //cv.imshow('canvasAfterThisFilterStepp', frame2);
+        cv.imshow('canvasWithAllFilter', dstC4);        
+
+        // clean to avoid the Memory DEAD
+
+        contours.delete();
+        hierarchy.delete();
+        greyscale_frame.delete();         
+        frame_delta.delete();
+
+    } catch (err) {
+        console.error("EXCEPTION / motionDetector(): " + err);
+    }      
+  	
+}
+
+
 
 /*
 MOTION-Detection:
@@ -556,8 +757,7 @@ function motionDetector_1(){
 
         gaussianBlur(dstC1); // gaussianBlur in  dstC1  
         cv.imshow('canvasAfterThisFilterStepp', dstC1);
-        threshold(dstC1); // threshold in dstC4
-        
+        threshold(dstC1); // threshold in dstC4        
        
         erosion(dstC4); // >> dstC4
         dilation(dstC4);  // >>  dstC4   
@@ -583,7 +783,6 @@ function motionDetector_1(){
         }     
 
 //Experiment with Lines:
-
         for (var i = 0; i < existingLines.length; ++i) {
 					  var line = existingLines[i];
             drawLine(srcRGB, line.startX, line.startY, line.endX, line.endY);
@@ -854,13 +1053,19 @@ function processVideo() {
   
   // CK - special Filter UC - from GUI we take the Parameters ONLY!
   
-  /*MOTION-DETECTION V1 - Block
+/*MOTION- Intersected with Line
+*/
   
-  */
+  motionDetectorIntersected();
+  frame2.copyTo(frame1);
+  vc.read(frame2);  
+
+  /*MOTION-DETECTION V1 - Block 
+    
   motionDetector_1();
   frame2.copyTo(frame1);
   vc.read(frame2);  
-  
+ */
 
   /*CANNY 
   vc.read(frame1);  
@@ -880,9 +1085,11 @@ function processVideo() {
   document.getElementById("cannyApertureSize").innerHTML =  controls.cannyApertureSize;
   document.getElementById("contoursMode").innerHTML =  getRetrievalModes(controls.contoursMode);
   document.getElementById("contoursMethod").innerHTML =  getContourApproximationModes(controls.contoursMethod);    
-  document.getElementById("inRange").innerHTML =  "lowerBoundary= " + controls.inRangeLow + " / higherBoundary= " + controls.inRangeHigh;
+  document.getElementById("inRange").innerHTML =  "lowerBoundary= " + controls.inRangeLow + " / higherBoundary= " + controls.inRangeHigh;  
   document.getElementById("morphology").innerHTML =  "M_Type= " +  getMorphTypes(controls.morphologyOp) + " / M_Shape= " + getMorphShapes(controls.morphologyShape) + " / BoarderType= " + getBorderTypes(controls.morphologyBorderType);
- 
+  document.getElementById("threshold").innerHTML =   controls.thresholdValue;
+  document.getElementById("gaussian_blur").innerHTML =   controls.gaussianBlurSize;
+
   // schedule the next one.
   let delay = 1000/FPS - (Date.now() - begin);
         setTimeout(processVideo, delay);  
@@ -956,11 +1163,11 @@ function initUI() {
     inRangeLow: 75,
     inRangeHigh: 150,
     threshold: function() { this.setFilter('threshold'); },
-    thresholdValue: 100,
+    thresholdValue: 20,
     adaptiveThreshold: function() { this.setFilter('adaptiveThreshold'); },
     adaptiveBlockSize: 3,
     gaussianBlur: function() { this.setFilter('gaussianBlur'); },
-    gaussianBlurSize: 3,
+    gaussianBlurSize: 11,
     medianBlur: function() { this.setFilter('medianBlur'); },
     medianBlurSize: 2,
     bilateralFilter: function() { this.setFilter('bilateralFilter'); },
@@ -1005,10 +1212,10 @@ function initUI() {
   //CK all filters at once  !!!!!!!!!!!!!!!!!!
   
   var obj = { add:function(){    
-    
-    console.log("ALL FITER in a set.."); 
+    existingLines = [];
+    console.log("I delete now all the hand made Drawings"); 
     }};
-  gui.add(obj, 'add').name('Get New Frame');
+  gui.add(obj, 'add').name('DEL DRAWs');
   
   var obj = { add:function(){ 
    
