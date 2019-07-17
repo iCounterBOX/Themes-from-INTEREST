@@ -1054,11 +1054,11 @@ function processVideo() {
   // CK - special Filter UC - from GUI we take the Parameters ONLY!
   
 /*MOTION- Intersected with Line
-*/
-  
+ */
   motionDetectorIntersected();
   frame2.copyTo(frame1);
   vc.read(frame2);  
+
 
   /*MOTION-DETECTION V1 - Block 
     
@@ -1068,9 +1068,10 @@ function processVideo() {
  */
 
   /*CANNY 
+ 
   vc.read(frame1);  
   CannyContoure_1();
-   */
+     */
 
   //Detect Bullet Target ( original from here: https://stackoverflow.com/questions/33321303/how-to-detect-bullet-holes-on-the-target)
   //vc.read(frame1);  
