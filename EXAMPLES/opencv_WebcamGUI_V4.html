@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>openCV_GUI_CK1</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+
+			canvas {
+          border: 1px solid black;
+        }
+      .invisible {
+        display: none;
+        }
+      .text-center {
+        text-align: center;
+        }
+      .center-block {
+        display: block;
+        margin: auto;
+      }
+      .row {
+      margin: 10px;
+        }
+
+      tr td {
+        padding-right: 10px;
+        width: 25%;
+        vertical-align: top;
+        font: 14px 'Lucida Grande', sans-serif;        
+      }
+
+        .layerStyle {
+            padding: 0px;
+            margin: 0px;
+            overflow: hidden;
+            background-color: transparent;
+            font-size: small;
+            color: rgb(63, 30, 30);
+            table-layout: auto;
+        }
+        table.layerStyle1 {
+            padding: 0px;
+            margin: 0px;            
+            background-color: transparent;
+            font-size: small;
+            color: rgb(128, 35, 131); 
+            border-collapse: collapse; 
+            border: 1px solid gray;           
+        }
+        table.layerStyle1 tr td{
+          border-collapse: collapse; 
+          border: 1px solid gray;
+          font: 15px 'Lucida Grande', sans-serif; 
+        }
+        
+
+        .text-container {
+            background: transparent;
+            padding: 0px;
+            height: 400px;
+            width: 300px;
+            position: absolute;
+            left: 0px;
+            top: 50px;           
+        }        
+
+        textarea {
+            background: transparent;
+            color: rgb(81, 20, 151);
+            resize: none;
+            border-color: indigo;
+            border-style: solid;
+            border-width: 2px;
+            width: 300px;
+            font-size: 11px;           
+            outline: thick;
+            height: 100%;
+        }
+
+		</style>
+	</head>
+	<body>
+
+<div id="container">
+  <table cellpadding="0" cellspacing="0" width="100%" border="0">
+    <tr>     
+      <td>
+        <div class="text-center">
+          <span>canvasOriginal + Contours: </span><span id="filterName">----</span>
+        </div>
+      </td>
+      <td>
+        <div class="text-center">
+            <span>canvasAfterThisFilterStepp: </span><span id="filterName2">----</span>
+        </div>
+      </td>
+      <td>
+        <div class="text-center">
+            <span>canvasWithAllFilter: </span><span id="filterName3">----</span>
+        </div> 
+      </td>
+      <td></td>
+    </tr>
+    <tr>     
+      <td>
+        <canvas class="center-block" id="canvasOriginal" width=500 height=500></canvas>
+      </td>
+      <td>
+        <canvas class="center-block" id="canvasAfterThisFilterStepp" width=500 height=500></canvas>
+      </td>
+      <td>
+        <canvas class="center-block" id="canvasWithAllFilter" width=500 height=500></canvas>
+      </td>
+      <td>
+        <div id="guiContainer"></div>
+      </td>
+      <td></td>
+    </tr>
+  </table>
+  <div class="invisible">
+    <video id="video" class="hidden">Your browser does not support the video tag.</video>
+  </div>
+</div>
+
+
+
+<div style="position: absolute; width: 1000px; z-index: 1; left: 0px;  top: 600px;">
+  <div>
+      <h4>openCV Parameters from GUI</h4>
+      <table class="layerStyle1">
+          <tbody>
+            <tr>
+              <th style="width: 1%">Filter / Paramaeter</th>
+              <th style="width: 99%">Value</th>           
+            </tr>
+            <tr>
+              <td>Curr Filter-queue</td>
+              <td id="filterQueue">frame1 >.. </td>
+            </tr>
+            <tr>
+              <td>cannyThreshold</td>
+              <td id="cannyThreshold">cannyThreshold1 = x cannyThreshold2 = y</td>
+            </tr>
+            <tr>
+                <td>cannyApertureSize</td>
+                <td id="cannyApertureSize">0</td>
+            </tr>
+            <tr>
+                <td>Contours - Mode</td>
+                <td id="contoursMode">-</td>
+            </tr>
+            <tr>
+                <td>Contours - Method</td>
+                <td id="contoursMethod">-</td>
+            </tr>
+            <tr>
+              <td>inRANGE</td>
+              <td id="inRange">lowerBoundary = x higherBoundary = y</td>
+            </tr>
+            <tr>
+              <td>MORPHOLOGY</td>
+              <td id="morphology">M_Type = x M_Shape = y BoarderType = y</td>
+            </tr>
+            <tr>
+              <td>Gaussian BLUR</td>
+              <td id="gaussian_blur">-</td>
+            </tr>
+            <tr>
+              <td>THRESHOLD</td>
+              <td id="threshold">-</td>
+            </tr>
+            <tr>
+              <td>STATE(run)</td>
+              <td id="runState">OK</td>
+          </tr>
+        
+          </tbody>
+      </table>
+  </div>
+</div>
+
+
+		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+		<script src="jslib/stats.min.js"></script>
+		<script src="jslib/dat.gui.min.js"></script>
+        <script async src="jslib/opencv.js" onload="opencvIsReady()"></script>
+		
+
+		<script>
+
+			// In this case, We set width 320, and the height will be computed based on the input stream.
+/*
+
+DAS hier ist ein openCV.js mit GUI - von CodePen: https://codepen.io/anon/pen/vwRQEQ
+
+MIT dieser opencv.js: https://huningxin.github.io/opencv.js/build/asm.js/opencv.js
+
+
+*/			
+
+//convert the openCV codes back to a string : https://docs.opencv.org/3.4/d3/dc0/group__imgproc__shape.html#ga4303f45752694956374734a03c54d5ff
+//json-lists..
+
+var RetrievalModes = [
+  {"name": "RETR_EXTERNAL", "code": 0}, 
+  {"name": "RETR_LIST", "code": 1}, 
+  {"name": "RETR_CCOMP", "code": 2}, 
+  {"name": "RETR_TREE", "code": 3},
+  {"name": "RETR_FLOODFILL", "code": 4}
+];	
+
+var ContourApproximationModes = [   // https://docs.opencv.org/3.4/dd/d46/imgproc_8hpp.html
+  {"name": "CHAIN_APPROX_NONE", "code": 1}, 
+  {"name": "CHAIN_APPROX_SIMPLE", "code": 2}, 
+  {"name": "CHAIN_APPROX_TC89_L1", "code": 3}, 
+  {"name": "CHAIN_APPROX_TC89_KCOS", "code": 4}  
+];	
+
+var MorphTypes = [   // https://docs.opencv.org/3.4/dd/d46/imgproc_8hpp.html
+  {"name": "MORPH_ERODE", "code": 0}, 
+  {"name": "MORPH_DILATE", "code": 1}, 
+  {"name": "MORPH_OPEN", "code": 2}, 
+  {"name": "MORPH_CLOSE", "code": 3},
+  {"name": "MORPH_GADIENT", "code": 4}, 
+  {"name": "MORPH_TOPHAT", "code": 5}, 
+  {"name": "MORPH_BLACKHAT", "code": 6}, 
+  {"name": "MORPH_MITMISS", "code": 7}    
+];
+var MorphShapes = [   
+  {"name": "MORPH_RECT", "code": 0},  
+  {"name": "MORPH_CROSS", "code": 1}, 
+  {"name": "MORPH_ELLIPSE", "code": 2}    
+];
+var BorderTypes = [       // https://vovkos.github.io/doxyrest-showcase/opencv/sphinx_rtd_theme/enum_cv_BorderTypes.html
+  {"name": "BORDER_CONSTANT", "code": 0},  
+  {"name": "BORDER_REPLICATE", "code": 1}, 
+  {"name": "BORDER_REFLECT", "code": 2},
+  {"name": "BORDER_WRAP", "code": 3},
+  {"name": "BORDER_REFLECT_101", "code": 4} 
+];
+
+//MOUSE - Mouse Move and LINE Draw
+
+var canvasWidth = 500;
+var canvasHeight = 500;
+var canvas = null;
+var bounds = null;
+var ctx = null;
+var hasLoaded = false;
+		
+var startX = 0;
+var startY = 0;
+var mouseX = 0;
+var mouseY = 0;
+var isDrawing = false;
+var existingLines = [];
+
+//CANVAS setting			
+let width = 500;
+let height = 0;
+
+// whether streaming video from the camera.
+let streaming = false;
+
+let video = document.getElementById("video");
+let stream = null;
+let vc = null;
+
+function startCamera() {
+  if (streaming) return;
+  navigator.mediaDevices.getUserMedia({video: true, audio: false})
+    .then(function(s) {
+    stream = s;
+    video.srcObject = s;
+    video.play();
+  })
+    .catch(function(err) {
+    console.log("An error occured! " + err);
+  });
+
+  video.addEventListener("canplay", function(ev){
+    if (!streaming) {
+      height = video.videoHeight / (video.videoWidth/width);
+      video.setAttribute("width", width);
+      video.setAttribute("height", height);
+      streaming = true;
+      vc = new cv.VideoCapture(video);
+    }
+    startVideoProcessing();
+  }, false);
+}
+
+let lastFilter = '';
+let src = null;
+let dst = null;
+let dstC1 = null;
+let dstC3 = null;
+let dstC4 = null;
+let frame1 = null;
+let frame2 = null;
+let srcRGB = null; // ck to store a frame ( e.g. original frame for contours image show )
+
+function startVideoProcessing() {
+  if (!streaming) { console.warn("Please startup your webcam"); return; }
+  stopVideoProcessing();
+  src = new cv.Mat(height, width, cv.CV_8UC4);  // ck ..
+  dst = new cv.Mat();
+  dstC1 = new cv.Mat(height, width, cv.CV_8UC1);  // ...GRAY
+  dstC3 = new cv.Mat(height, width, cv.CV_8UC3);
+  dstC4 = new cv.Mat(height, width, cv.CV_8UC4);
+  frame1 = new cv.Mat(height, width, cv.CV_8UC4); // ck
+  frame2 = new cv.Mat(height, width, cv.CV_8UC4); // ck
+  srcRGB = new cv.Mat(height, width, cv.CV_8UC4); // ck
+
+  vc.read(frame1);
+  vc.read(frame2);
+  setTimeout(processVideo, 0);
+  //requestAnimationFrame(processVideo);
+}
+
+function passThrough(src) {
+  return src;
+}
+
+function gray(src) {
+  cv.cvtColor(src, dstC1, cv.COLOR_RGBA2GRAY);
+  return dstC1;
+}
+
+function hsv(src) {
+  cv.cvtColor(src, dstC3, cv.COLOR_RGBA2RGB);
+  cv.cvtColor(dstC3, dstC3, cv.COLOR_RGB2HSV);
+  return dstC3;
+}
+//ck: wir gehen in die funktionen jetzt standardmäßig mit GRAY rein
+function canny(src) {
+  cv.cvtColor(src, dstC1, cv.COLOR_RGBA2GRAY);
+  cv.Canny(dstC1, dstC1, controls.cannyThreshold1, controls.cannyThreshold2, controls.cannyApertureSize, controls.cannyL2Gradient);
+  return dstC1;   // return gray
+}
+
+//ck: der gibt eh gray zurück
+function inRange(src) {
+  let lowValue = controls.inRangeLow;
+  let lowScalar = new cv.Scalar(lowValue, lowValue, lowValue, 255);
+  let highValue = controls.inRangeHigh;
+  let highScalar = new cv.Scalar(highValue, highValue, highValue, 255);
+  let low = new cv.Mat(height, width, src.type(), lowScalar);
+  let high = new cv.Mat(height, width, src.type(), highScalar);
+  cv.inRange(src, low, high, dstC1);
+  low.delete(); high.delete();
+  return dstC1;
+}
+
+//https://docs.opencv.org/3.4.2/d7/dd0/tutorial_js_thresholding.html
+//typical: cv.threshold(src, dst, 177, 200, cv.THRESH_BINARY);
+//..bunary ist am meisten verwendet! /  cv.threshold (src, dst, thresh, maxval, type)
+function threshold(src) { 
+  cv.threshold(src, dstC4, controls.thresholdValue, 200, cv.THRESH_BINARY);
+  return dstC4;
+}
+
+function adaptiveThreshold(src) {
+  let mat = new cv.Mat(height, width, cv.CV_8U);
+  cv.cvtColor(src, mat, cv.COLOR_RGBA2GRAY);
+  cv.adaptiveThreshold(mat, dstC1, 200, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, Number(controls.adaptiveBlockSize), 2);
+  mat.delete();
+  return dstC1;
+}
+
+//https://docs.opencv.org/trunk/dd/d6a/tutorial_js_filtering.html
+//not a big effect..some Blur..example use 3 for kernel
+function gaussianBlur(src) {
+  let ksize = new cv.Size(controls.gaussianBlurSize, controls.gaussianBlurSize);            //https://docs.opencv.org/trunk/dd/d6a/tutorial_js_filtering.html
+  cv.GaussianBlur(src, dstC1, ksize, 20, 255, cv.BORDER_DEFAULT);
+  return dstC1;
+}
+
+function bilateralFilter(src) {
+  let mat = new cv.Mat(height, width, cv.CV_8UC3);
+  cv.cvtColor(src, mat, cv.COLOR_RGBA2RGB);
+  cv.bilateralFilter(mat, dstC3, controls.bilateralFilterDiameter, controls.bilateralFilterSigma, controls.bilateralFilterSigma, cv.BORDER_DEFAULT);
+  mat.delete();
+  return dstC3;
+}
+
+
+//https://github.com/ucisysarch/opencvjs/blob/master/test/img_proc.html
+//https://docs.opencv.org/trunk/dd/d6a/tutorial_js_filtering.html
+//mit RGB rein und mit RGB raus !!
+function medianBlur(src){		
+		cv.medianBlur(src, dstC4, 2*controls.medianBlurSize+1);		 // ODD values
+	}
+
+function sobel(src) {
+  var mat = new cv.Mat(height, width, cv.CV_8UC1);
+  cv.cvtColor(src, mat, cv.COLOR_RGB2GRAY, 0);
+  cv.Sobel(mat, dstC1, cv.CV_8U, 1, 0, controls.sobelSize, 1, 0, cv.BORDER_DEFAULT);
+  mat.delete();
+  return dstC1;
+}
+
+function scharr(src) {
+  var mat = new cv.Mat(height, width, cv.CV_8UC1);
+  cv.cvtColor(src, mat, cv.COLOR_RGB2GRAY, 0);
+  cv.Scharr(mat, dstC1, cv.CV_8U, 1, 0, 1, 0, cv.BORDER_DEFAULT);
+  mat.delete();
+  return dstC1;
+}
+
+function laplacian(src) {
+  var mat = new cv.Mat(height, width, cv.CV_8UC1);
+  cv.cvtColor(src, mat, cv.COLOR_RGB2GRAY);
+  cv.Laplacian(mat, dstC1, cv.CV_8U, controls.laplacianSize, 1, 0, cv.BORDER_DEFAULT);
+  mat.delete();
+  return dstC1;
+}
+
+let contoursColor = [];
+for (let i = 0; i < 10000; i++) {
+  contoursColor.push([Math.round(Math.random() * 255), Math.round(Math.random() * 255), Math.round(Math.random() * 255), 0]);
+}
+
+function contours(src) {
+  cv.cvtColor(src, dstC1, cv.COLOR_RGBA2GRAY);  
+  let contours  = new cv.MatVector();
+  let hierarchy = new cv.Mat();
+  cv.findContours(dstC4, contours, hierarchy, Number(controls.contoursMode), Number(controls.contoursMethod), {x: 0, y: 0});
+  dstC3.delete();
+  dstC3 = cv.Mat.ones(height, width, cv.CV_8UC3);
+  for (let i = 0; i<contours.size(); ++i)
+  {
+    let color = contoursColor[i];
+    cv.drawContours(dstC3, contours, i, color, 1, cv.LINE_8, hierarchy);
+  }
+  contours.delete(); hierarchy.delete();
+  return dstC3;
+}
+
+function calcHist(src) {
+  cv.cvtColor(src, dstC1, cv.COLOR_RGBA2GRAY);
+  let srcVec = new cv.MatVector();
+  srcVec.push_back(dstC1);
+  let scale = 2;
+  let channels = [0], histSize = [src.cols/scale], ranges = [0,255];
+  let hist = new cv.Mat(), mask = new cv.Mat(), color = new cv.Scalar(0xfb, 0xca, 0x04, 0xff);
+  cv.calcHist(srcVec, channels, mask, hist, histSize, ranges);
+  let result = cv.minMaxLoc(hist, mask);
+  var max = result.maxVal;
+  cv.cvtColor(dstC1, dstC4, cv.COLOR_GRAY2RGBA);
+  // draw histogram on src
+  for(var i = 0; i < histSize[0]; i++)
+  {
+      var binVal = hist.data32F[i] * src.rows / max;
+      cv.rectangle(dstC4, {x: i * scale, y: src.rows - 1}, {x: (i + 1) * scale - 1, y: src.rows - binVal/3}, color, cv.FILLED);
+  }
+  srcVec.delete();
+  mask.delete();
+  hist.delete();
+  return dstC4;
+}
+
+function equalizeHist(src) {
+  cv.cvtColor(src, dstC1, cv.COLOR_RGBA2GRAY, 0);
+  cv.equalizeHist(dstC1, dstC1);
+  return dstC1;
+}
+
+let base;
+
+function backprojection(src) {
+  if (lastFilter !== 'backprojection') {
+    if (base instanceof cv.Mat)
+      base.delete();
+    base = src.clone();
+    cv.cvtColor(base, base, cv.COLOR_RGB2HSV, 0);
+  }
+  cv.cvtColor(src, dstC3, cv.COLOR_RGB2HSV, 0);
+  let baseVec = new cv.MatVector(), targetVec = new cv.MatVector();
+  baseVec.push_back(base); targetVec.push_back(dstC3);
+  let mask = new cv.Mat(), hist = new cv.Mat();
+  let channels = [0], histSize = [50];
+  let ranges;
+  if (controls.backprojectionRangeLow < controls.backprojectionRangeHigh)
+    ranges = [controls.backprojectionRangeLow, controls.backprojectionRangeHigh];
+  else
+    return src;
+  cv.calcHist(baseVec, channels, mask, hist, histSize, ranges);
+  cv.normalize(hist, hist, 0, 255, cv.NORM_MINMAX);
+  cv.calcBackProject(targetVec, channels, hist, dstC1, ranges, 1);
+  baseVec.delete();
+  targetVec.delete();
+  mask.delete();
+  hist.delete();
+  return dstC1;
+}
+
+function erosion(src) {
+  let kernelSize = controls.erosionSize;
+  let kernel = cv.Mat.ones(kernelSize, kernelSize, cv.CV_8U);
+  let color = new cv.Scalar();
+  cv.erode(src, dstC4, kernel, {x: -1, y: -1}, 1, Number(controls.erosionBorderType), color);
+  kernel.delete();
+  return dstC4;
+}
+
+/*  https://docs.opencv.org/3.4/d4/d76/tutorial_js_morphological_ops.html 
+*/
+function dilation(src) {
+  let kernelSize = controls.dilationSize;
+  let kernel = cv.Mat.ones(kernelSize, kernelSize, cv.CV_8U);
+  let color = new cv.Scalar();
+  cv.dilate(src, dstC4, kernel, {x: -1, y: -1}, 1, Number(controls.dilationBorderType), color);
+  kernel.delete();
+  return dstC4;
+}
+
+function morphology(src) {
+  let kernelSize = controls.morphologySize;
+  let kernel = cv.getStructuringElement(Number(controls.morphologyShape), {width: kernelSize, height: kernelSize});
+  let color = new cv.Scalar();
+  let op = Number(controls.morphologyOp);
+  let image = src;
+  if (op === cv.MORPH_GRADIENT || op === cv.MORPH_TOPHAT || op === cv.MORPH_BLACKHAT) {
+    cv.cvtColor(src, dstC3, cv.COLOR_RGBA2RGB);
+    image = dstC3;
+  }
+  cv.morphologyEx(image, dstC4, op, kernel, {x: -1, y: -1}, 1, Number(controls.morphologyBorderType), color);
+  kernel.delete();
+  return dstC4;
+}
+
+
+/*
+CHECK THE INTERSECTION OF 2 LINES
+https://www.desmos.com/calculator/zsqc77gq9v
+
+Line1:  y-y1 = m1 (x-x1)  ->  m1 = (y2-y1)/(x2-x1)
+Line2:  y-y3 = m2 (x-x3)  ->  m2 = (y4-y4)/(x4-x3)
+
+BoderLine: x1,y1, x2,y2
+
+Moving-Object-Line: x3,y3, x4,y4
+
+!!! Is working but would need to check if the lines are within my coordinates 
+
+*/
+
+function checkIntersection( x1,y1, x2,y2, x3,y3, x4,y4  )
+{
+  var intersec = [];
+
+    try{
+
+      // we are only interested in intersec within the ParkingLot Dimensions ( BoarderLine-Len HAND drawn) and the Car dimension
+      if (x3 >= x1 && x4 <= x2){
+
+        var l1 = (y2-y1)/(x2-x1);
+        var l2 = (y4-y3)/(x4-x3);
+        var c1 = y1 - (l1*x1);
+        var c2 = y3 - (l2*x3);
+        var x = (c2-c1)/(l1-l2);  // X
+        var y = l1 * x + c1;  // Y
+
+      console.log("checkIntersection) / iSect_X= " + x.toFixed(1) +  " iSect_Y= " + y.toFixed(1)   );
+      }    
+    } catch (err) {
+            console.error("EXCEPTION / checkIntersection(): " + err);
+        }    
+}
+
+/*
+No clue how this is working...found on stackOverflow - but is working like charme
+Return true/false if an intersection was made
+
+*/
+
+function checkIntersection_V2(a,b,c,d,p,q,r,s) {
+
+  try{
+      var det, gamma, lambda;
+      det = (c - a) * (s - q) - (r - p) * (d - b);
+      if (det === 0) {
+        return false;
+      } else {
+        lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
+        gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
+        return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+      }
+  } catch (err) {
+            console.error("EXCEPTION / checkIntersection2(): " + err);
+        }  
+
+  
+};
+
+
+// CK: SPECIAL Functions
+
+/*
+MOTION-Detection & Intersection:
+formula for intersection ( 2 Lines ): https://www.desmos.com/calculator/zsqc77gq9v
+
+Line:
+https://docs.opencv.org/3.4/dc/dcf/tutorial_js_contour_features.html
+https://docs.opencv.org/3.4/d5/daa/tutorial_js_contours_begin.html
+
+*/
+
+var carIsIn = false;
+
+function motionDetectorIntersected(){  
+    try {
+
+        document.getElementById("filterQueue").innerHTML =  "FRAME1+2 > absDIFF > gaussianBLUR > THRESHOLD > EROSION  >  DILATION > CONTOURS";
+        let _text = 'Parking Detection';
+
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        let greyscale_frame = new cv.Mat(video.height, video.width, cv.CV_8UC1);  
+        let frame_delta = new cv.Mat();  
+
+        // tricky..erst auf grau ..dann auf rgb ..nur so bekomme ich farbige konturen??
+        cv.cvtColor(frame1, srcRGB, cv.COLOR_RGBA2GRAY);
+        cv.cvtColor(srcRGB, srcRGB, cv.COLOR_GRAY2RGB);
+
+        //Und los geht die filterei
+            
+        cv.absdiff(frame1, frame2, frame_delta);  //  https://answers.opencv.org/question/184025/detecting-change-in-previous-and-current-image-frame/       
+        cv.cvtColor(frame_delta, dstC1, cv.COLOR_RGBA2GRAY, 0);
+        
+        // nicht gut cv.adaptiveThreshold(dstC1, dstC1, 200, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, Number(controls.adaptiveBlockSize), 2);
+
+        gaussianBlur(dstC1); // gaussianBlur in  dstC1          
+        threshold(dstC1); // threshold in dstC4        
+       
+        erosion(dstC4); // >> dstC4
+        cv.imshow('canvasAfterThisFilterStepp', dstC4);
+        dilation(dstC4);  // >>  dstC4   
+              
+
+
+        //DRAW Limes-Line if there is one...currently we only take ONE
+        
+        for (var i = 0; i < existingLines.length; ++i) {
+					  var line = existingLines[i];
+            drawLine(srcRGB, line.startX, line.startY, line.endX, line.endY);
+            //console.log("draw() / line.startX= " + line.startX.toFixed(0) +  " line.startY= " + line.startY.toFixed(0)  + " line.endX= " + line.endX.toFixed(0) + " line.endY= " + line.endY.toFixed(0)  );
+	      }
+
+        //contours
+        	
+        cv.findContours(dstC4, contours, hierarchy, Number(controls.contoursMode), Number(controls.contoursMethod), {x: 0, y: 0});
+        // Draw the rectangle  
+        let largestArea = 0;        
+        let li = 0;
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);	    
+            let a = cv.contourArea(cnt);
+
+            if ( a > largestArea ){   // get the biggest contour
+              largestArea = a;
+              li = i;
+             
+            }               
+            cnt.delete();
+        }
+        if (largestArea > 800) {
+          let rect = cv.boundingRect(contours.get(li));
+          let contoursColor = new cv.Scalar(0, 255, 0);
+          let rectangleColor = new cv.Scalar(255, 255, 0);        
+          //cv.drawContours(srcRGB, contours, 0, contoursColor, 1, 8, hierarchy, 100);  // <- BESSER..macht nur die äußere kontur ( Hand )  ( //cv.drawContours(srcRGB, contours, -1, contoursColor, 1, cv.LINE_8); // <- UNGÜNSTG - macht auch die querverbindungen  )
+          let point1 = new cv.Point(rect.x, rect.y);
+          let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+          cv.rectangle(srcRGB, point1, point2, rectangleColor, 2, cv.LINE_AA, 0);
+          cv.line(srcRGB, point1, point2, rectangleColor , 2, cv.LINE_AA, 0);
+          _text = 'Parking Detection';    // text that appears when there is motion in video feed  
+          cv.putText(srcRGB, largestArea.toString(), {x: rect.x+0,  y: rect.y+20}, cv.FONT_HERSHEY_SIMPLEX, 0.5, [255, 0, 0, 255]);    
+
+          //Check if there is an intersection - And a little LOGIC if this LOT is FREE
+
+          if (  existingLines.length == 2)  {
+              //check if Car is IN the lot..is driving into the LOT
+              var line = existingLines[1];    // this is the line IN the parking Lot
+              var inter = checkIntersection_V2(line.startX, line.startY, line.endX, line.endY, rect.x, rect.y,rect.x + rect.width, rect.y + rect.height );
+              if (inter == true && carIsIn == false ){
+                console.log("checkIntersection_V2()) / PARKING LOT IS NOT FREE"  );
+                carIsIn = true;              
+              }
+
+              line = existingLines[0];    // this is the line we MUST cross when dring OUT of the ParkingLot
+              var inter = checkIntersection_V2(line.startX, line.startY, line.endX, line.endY, rect.x, rect.y,rect.x + rect.width, rect.y + rect.height );
+              if (inter == true && carIsIn == true){
+                console.log("checkIntersection_V2()) / PARKING LOT is FREE"  );
+                carIsIn = false;              
+              }             
+          } 
+
+        }    
+        
+        if (carIsIn == true && existingLines.length == 2) cv.putText(srcRGB, "NOT FREE", {x: existingLines[1].startX, y: existingLines[1].startY +20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);
+        if (carIsIn == false && existingLines.length == 2) cv.putText(srcRGB, "FREE", {x: existingLines[1].startX, y: existingLines[1].startY+20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);          
+        
+        //put some text beside the bounding BOX:
+
+        cv.putText(srcRGB, _text, {x: 10, y: 20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);
+        cv.putText(srcRGB, getDateTime(), {x: 10, y: height-10}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 0, 255, 255]);
+
+        cv.imshow("canvasOriginal",srcRGB);  // Original mit contours
+        //cv.imshow('canvasAfterThisFilterStepp', frame2);
+        cv.imshow('canvasWithAllFilter', dstC4);        
+
+        // clean to avoid the Memory DEAD
+
+        contours.delete();
+        hierarchy.delete();
+        greyscale_frame.delete();         
+        frame_delta.delete();
+
+    } catch (err) {
+        console.error("EXCEPTION / motionDetector(): " + err);
+    }      
+  	
+}
+
+
+
+/*
+MOTION-Detection:
+DeltaFrame -> gaussianBlur >  threshold > dilation  > contours
+state: is working but not so good for details..main parameter is threshold and dilation 
+*/
+
+function motionDetector_1(){  
+    try {
+
+        document.getElementById("filterQueue").innerHTML =  "FRAME1+2 > absDIFF > gaussianBLUR > THRESHOLD > EROSION  >  DILATION > CONTOURS";
+        let _text = 'Unoccupied';
+
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        let greyscale_frame = new cv.Mat(video.height, video.width, cv.CV_8UC1);  
+        let frame_delta = new cv.Mat();  
+
+        // tricky..erst auf grau ..dann auf rgb ..nur so bekomme ich farbige konturen??
+        cv.cvtColor(frame1, srcRGB, cv.COLOR_RGBA2GRAY);
+        cv.cvtColor(srcRGB, srcRGB, cv.COLOR_GRAY2RGB);
+
+        //Und los geht die filterei
+            
+        cv.absdiff(frame1, frame2, frame_delta);  //  https://answers.opencv.org/question/184025/detecting-change-in-previous-and-current-image-frame/
+       
+        cv.cvtColor(frame_delta, dstC1, cv.COLOR_RGBA2GRAY, 0);
+        
+        // nicht gut cv.adaptiveThreshold(dstC1, dstC1, 200, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, Number(controls.adaptiveBlockSize), 2);
+
+        gaussianBlur(dstC1); // gaussianBlur in  dstC1  
+        cv.imshow('canvasAfterThisFilterStepp', dstC1);
+        threshold(dstC1); // threshold in dstC4        
+       
+        erosion(dstC4); // >> dstC4
+        dilation(dstC4);  // >>  dstC4   
+              
+
+        //contours
+        cv.findContours(dstC4, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);  	
+        // Draw the rectangle  
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);	    
+            if ( cv.contourArea(cnt) > 500 ){
+                let rect = cv.boundingRect(cnt);
+                let contoursColor = new cv.Scalar(0, 255, 0);
+                let rectangleColor = new cv.Scalar(255, 255, 0);        
+                //cv.drawContours(srcRGB, contours, 0, contoursColor, 1, 8, hierarchy, 100);  // <- BESSER..macht nur die äußere kontur ( Hand )  ( //cv.drawContours(srcRGB, contours, -1, contoursColor, 1, cv.LINE_8); // <- UNGÜNSTG - macht auch die querverbindungen  )
+                let point1 = new cv.Point(rect.x, rect.y);
+                let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+                cv.rectangle(srcRGB, point1, point2, rectangleColor, 2, cv.LINE_AA, 0);
+                _text = 'Occupied';    // text that appears when there is motion in video feed  
+                cv.putText(srcRGB, cv.contourArea(cnt).toString(), {x: rect.x+0,  y: rect.y+20}, cv.FONT_HERSHEY_SIMPLEX, 0.5, [255, 0, 0, 255]);             
+            }
+            cnt.delete();
+        }     
+
+//Experiment with Lines:
+        for (var i = 0; i < existingLines.length; ++i) {
+					  var line = existingLines[i];
+            drawLine(srcRGB, line.startX, line.startY, line.endX, line.endY);
+            //console.log("draw() / line.startX= " + line.startX.toFixed(0) +  " line.startY= " + line.startY.toFixed(0)  + " line.endX= " + line.endX.toFixed(0) + " line.endY= " + line.endY.toFixed(0)  );
+	      }
+
+        //put some text beside the bounding BOX:
+
+        cv.putText(srcRGB, _text, {x: 10, y: 20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);
+        cv.putText(srcRGB, getDateTime(), {x: 10, y: height-10}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 0, 255, 255]);
+
+        cv.imshow("canvasOriginal",srcRGB);  // Original mit contours
+        //cv.imshow('canvasAfterThisFilterStepp', frame2);
+        cv.imshow('canvasWithAllFilter', dstC4);        
+
+        // clean to avoid the Memory DEAD
+
+        contours.delete();
+        hierarchy.delete();
+        greyscale_frame.delete();         
+        frame_delta.delete();
+
+    } catch (err) {
+        console.error("EXCEPTION / motionDetector(): " + err);
+    }      
+  	
+}
+
+/*
+  https://stackoverflow.com/questions/33321303/how-to-detect-bullet-holes-on-the-target
+  from example:
+  inRange e.g. : 93....187
+  morphology e.g. : open / elipse / kern = 7 / constant
+  contours e.g. : retR_ccomp / chai__simple
+
+*/
+function bulletsInTarget(){ 
+  try {
+        document.getElementById("filterQueue").innerHTML =  "FRAME1 > inRANGE > MORPHOLOGY > CONTOURS";
+
+        let _text = 'Unoccupied';
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        
+              
+        // tricky..erst auf grau ..dann auf rgb ..nur so bekomme ich farbige konturen?? - ONLY to be ready for the DISPLAY
+        cv.cvtColor(frame1, dstC1, cv.COLOR_RGBA2GRAY); // dstC1 = GRAY
+        cv.cvtColor(dstC1, srcRGB, cv.COLOR_GRAY2RGB); // srcGB + contours wird im canvas später als result gezeigt
+
+        inRange(frame1); // dstC1 (GRAY) .. segmentation technique, known as Color Segmentation in which you threshold the given RGB image to get a binary image      
+        cv.imshow('canvasAfterThisFilterStepp', dstC1);   
+        morphology(dstC1);  // >> OUT dstC4 
+        
+        //adaptiveThreshold(dstC4); // dstC1 ( GRAY )           
+        
+
+        //contours
+        cv.findContours(dstC4, contours, hierarchy, Number(controls.contoursMode), Number(controls.contoursMethod), {x: 0, y: 0});
+       
+        // Draw the rectangle  
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);	    
+            if ( cv.contourArea(cnt) > 80  && cv.contourArea(cnt) < 800){
+                let rect = cv.boundingRect(cnt);
+                let contoursColor = new cv.Scalar(0, 255, 0);
+                let rectangleColor = new cv.Scalar(255, 255, 0);        
+                //cv.drawContours(srcRGB, contours, 0, contoursColor, 1, 8, hierarchy, 100);  // <- BESSER..macht nur die äußere kontur ( Hand )  ( //cv.drawContours(srcRGB, contours, -1, contoursColor, 1, cv.LINE_8); // <- UNGÜNSTG - macht auch die querverbindungen  )
+                let point1 = new cv.Point(rect.x, rect.y);
+                let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+                cv.rectangle(srcRGB, point1, point2, rectangleColor, 2, cv.LINE_AA, 0);
+                _text = 'Occupied';    // text that appears when there is motion in video feed  
+                cv.putText(srcRGB, cv.contourArea(cnt).toString(), {x: rect.x+0,  y: rect.y+20}, cv.FONT_HERSHEY_SIMPLEX, 0.5, [153, 204, 255, 255]);             
+            }
+            cnt.delete();
+        }     
+
+        //put some text beside the bounding BOX:
+
+        cv.putText(srcRGB, _text, {x: 10, y: 20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);
+        cv.putText(srcRGB, getDateTime(), {x: 10, y: height-10}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 0, 255, 255]);
+
+        cv.imshow("canvasOriginal",srcRGB);  // Original mit contours
+        //cv.imshow('canvasAfterThisFilterStepp', frame1);
+        cv.imshow('canvasWithAllFilter', dstC4 );        
+
+        // clean to avoid the Memory DEAD
+
+        contours.delete();
+        hierarchy.delete();               
+        
+
+    } catch (err) {
+        console.error("EXCEPTION / CannyContoure(): " + err);
+    }      
+  	
+}
+
+/*
+CannyContour:
+
+remember:
+canny-input (8bit image/dstC8)  - output edge map; single channels 8-bit image, which has the same size as image. 
+https://docs.opencv.org/3.4/d7/de1/tutorial_js_canny.html
+
+Morphological Transformations: (e.g. dilation / morphologyEx )
+https://docs.opencv.org/trunk/d4/d76/tutorial_js_morphological_ops.html
+
+document.getElementById("SplineSegmentCounter").innerHTML = _splinePointsLength;
+state: 
+*/
+
+function CannyContoure_1(){  
+    try {
+        document.getElementById("filterQueue").innerHTML =  "FRAME1 > DILATION > MORPHOLOGY > THRESHOLD > GRAY > CANNY > CONTOURS >";
+
+        let _text = 'Unoccupied';
+
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        
+              
+        // tricky..erst auf grau ..dann auf rgb ..nur so bekomme ich farbige konturen?? - ONLY to be ready for the DISPLAY
+        cv.cvtColor(frame1, dstC1, cv.COLOR_RGBA2GRAY); // dstC1 = GRAY
+        cv.cvtColor(dstC1, srcRGB, cv.COLOR_GRAY2RGB); // srcGB + contours wird im canvas später als result gezeigt
+
+        //der eigentliche Filter aufbau
+
+        dilation(frame1);  // >>  dstC4  
+        morphology(dstC4);  // >>  dstC4
+        threshold(dstC4); // >> dstC4
+
+        cv.imshow('canvasAfterThisFilterStepp', dstC4); 
+
+        cv.cvtColor(dstC4, dstC1, cv.COLOR_RGBA2GRAY); // dstC1 = GRAY      
+        cv.Canny(dstC1, dstC1, controls.cannyThreshold1, controls.cannyThreshold2, controls.cannyApertureSize, controls.cannyL2Gradient);  // Input GRAY >> dstC1
+
+        //contours
+        cv.findContours(dstC1, contours, hierarchy, Number(controls.contoursMode), Number(controls.contoursMethod), {x: 0, y: 0});
+       
+        // Draw the rectangle  
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);	    
+            if ( cv.contourArea(cnt) > 80 ){
+                let rect = cv.boundingRect(cnt);
+                let contoursColor = new cv.Scalar(0, 255, 0);
+                let rectangleColor = new cv.Scalar(255, 255, 0);        
+                //cv.drawContours(srcRGB, contours, 0, contoursColor, 1, 8, hierarchy, 100);  // <- BESSER..macht nur die äußere kontur ( Hand )  ( //cv.drawContours(srcRGB, contours, -1, contoursColor, 1, cv.LINE_8); // <- UNGÜNSTG - macht auch die querverbindungen  )
+                let point1 = new cv.Point(rect.x, rect.y);
+                let point2 = new cv.Point(rect.x + rect.width, rect.y + rect.height);
+                cv.rectangle(srcRGB, point1, point2, rectangleColor, 2, cv.LINE_AA, 0);
+                _text = 'Occupied';    // text that appears when there is motion in video feed  
+                cv.putText(srcRGB, cv.contourArea(cnt).toString(), {x: rect.x+0,  y: rect.y+20}, cv.FONT_HERSHEY_SIMPLEX, 0.5, [153, 204, 255, 255]);             
+            }
+            cnt.delete();
+        }
+        
+        
+        //Experiment with Lines:
+
+        for (var i = 0; i < existingLines.length; ++i) {
+					  var line = existingLines[i];
+            drawLine(srcRGB, line.startX, line.startY, line.endX, line.endY);
+            //console.log("draw() / line.startX= " + line.startX.toFixed(0) +  " line.startY= " + line.startY.toFixed(0)  + " line.endX= " + line.endX.toFixed(0) + " line.endY= " + line.endY.toFixed(0)  );
+	      }
+
+
+        //put some text beside the bounding BOX:
+
+        cv.putText(srcRGB, _text, {x: 10, y: 20}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 255, 0, 255]);
+        cv.putText(srcRGB, getDateTime(), {x: 10, y: height-10}, cv.FONT_HERSHEY_SIMPLEX, 1.0, [0, 0, 255, 255]);
+
+        cv.imshow("canvasOriginal",srcRGB);  // Original mit contours
+        //cv.imshow('canvasAfterThisFilterStepp', frame1);
+        cv.imshow('canvasWithAllFilter', dstC1 );        
+
+        // clean to avoid the Memory DEAD
+
+        contours.delete();
+        hierarchy.delete();               
+        
+
+    } catch (err) {
+        console.error("EXCEPTION / CannyContoure(): " + err);
+    }      
+  	
+}
+
+
+// End OF CK Special FKTs
+function drawLine(scrV, startX, startY, endX, endY ){
+    let lineColor = new cv.Scalar(0, 255, 0);
+    let point1 = new cv.Point(startX, startY);  let point2 = new cv.Point( endX, endY);    
+    cv.line(scrV, point1, point2, lineColor, 2);    
+}
+function getDateTime(){
+    let current_datetime = new Date();
+    let formatted_date = current_datetime.getFullYear() + "-" + (current_datetime.getMonth() + 1) + "-" + current_datetime.getDate() + " " + current_datetime.getHours() + ":" + current_datetime.getMinutes() + ":" + current_datetime.getSeconds(); 
+    return formatted_date.toString();
+}
+//get the element of a json - https://stackoverflow.com/questions/19253753/javascript-find-json-value/19254067
+
+//RetrievalModes ( enum from openCV )
+function getRetrievalModes(id) {
+    for (var i = 0; i < RetrievalModes.length; i++){  
+      if (RetrievalModes[i].code == id)  return RetrievalModes[i].name;
+    }
+    return "-";     
+}
+function getContourApproximationModes(id) {
+    for (var i = 0; i < ContourApproximationModes.length; i++){  
+      if (ContourApproximationModes[i].code == id)  return ContourApproximationModes[i].name;
+    }
+    return "-";     
+}
+function getMorphTypes(id) {
+    for (var i = 0; i < MorphTypes.length; i++){  
+      if (MorphTypes[i].code == id)  return MorphTypes[i].name;
+    }
+    return "-";     
+}
+function getMorphShapes(id) {
+    for (var i = 0; i < MorphShapes.length; i++){  
+      if (MorphShapes[i].code == id)  return MorphShapes[i].name;
+    }
+    return "-";     
+}
+function getBorderTypes(id) {
+    for (var i = 0; i < BorderTypes.length; i++){  
+      if (BorderTypes[i].code == id)  return BorderTypes[i].name;
+    }
+    return "-";     
+}
+
+
+
+
+const FPS = 30;
+function processVideo() {
+  
+  stats.begin();  
+  // START the SHOW ...
+  let begin = Date.now(); 
+  let result;
+
+  switch (controls.filter) {
+    case 'passThrough':  break;  // we only take the parameters   result = passThrough(src)
+    case 'gray':    break; // we only take the parameters  / result = gray(src);
+    case 'hsv':  break; // we only take the parameters - result = hsv(src);
+    case 'canny':   break; // we only take the parameters - canny(dstC1))
+    case 'inRange':  break; // we only take the parameters -  result = inRange(src);
+    case 'threshold':  break;  // we only take the parameters
+    case 'adaptiveThreshold':  break; // we only take the parameters - result = adaptiveThreshold(src);
+    case 'gaussianBlur':   break;  // we only take the parameters
+    case 'bilateralFilter':  break;  // we only take the parameters - result = bilateralFilter(src);
+    case 'medianBlur': break;  // we only take the parameters -  result = medianBlur(src);
+    case 'sobel':  break;  // we only take the parameters - result = sobel(src);
+    case 'scharr': break; // we only take the parameters - result = scharr(src); 
+    case 'laplacian':  break; // we only take the parameters - result = laplacian(src);
+    case 'contours':  break; // we only take the parameters
+    case 'calcHist':  break; // we only take the parameters - result = calcHist(src);
+    case 'equalizeHist': break; // we only take the parameters -  result = equalizeHist(src);
+    case 'backprojection':  break; // we only take the parameters - result = backprojection(src);
+    case 'erosion':  break; // we only take the parameters - result = erosion(src);
+    case 'dilation':  break; // we only take the parameters
+    case 'morphology':  break; // we only take the parameters  result = morphology(src);  
+    default:  // we only take the parameters - result = passThrough(src); 
+  }
+  
+  // CK - special Filter UC - from GUI we take the Parameters ONLY!
+  
+/*MOTION- Intersected with Line
+ */
+  motionDetectorIntersected();
+  frame2.copyTo(frame1);
+  vc.read(frame2);  
+
+
+  /*MOTION-DETECTION V1 - Block 
+    
+  motionDetector_1();
+  frame2.copyTo(frame1);
+  vc.read(frame2);  
+ */
+
+  /*CANNY 
+ 
+  vc.read(frame1);  
+  CannyContoure_1();
+     */
+
+  //Detect Bullet Target ( original from here: https://stackoverflow.com/questions/33321303/how-to-detect-bullet-holes-on-the-target)
+  //vc.read(frame1);  
+  //bulletsInTarget();
+
+  // CK - end - Block
+
+  stats.end();
+  lastFilter = controls.filter;
+
+  document.getElementById("cannyThreshold").innerHTML = "cannyThreshold_1= " + controls.cannyThreshold1 + " / cannyThreshold_2= " + controls.cannyThreshold2;
+  document.getElementById("cannyApertureSize").innerHTML =  controls.cannyApertureSize;
+  document.getElementById("contoursMode").innerHTML =  getRetrievalModes(controls.contoursMode);
+  document.getElementById("contoursMethod").innerHTML =  getContourApproximationModes(controls.contoursMethod);    
+  document.getElementById("inRange").innerHTML =  "lowerBoundary= " + controls.inRangeLow + " / higherBoundary= " + controls.inRangeHigh;  
+  document.getElementById("morphology").innerHTML =  "M_Type= " +  getMorphTypes(controls.morphologyOp) + " / M_Shape= " + getMorphShapes(controls.morphologyShape) + " / BoarderType= " + getBorderTypes(controls.morphologyBorderType);
+  document.getElementById("threshold").innerHTML =   controls.thresholdValue;
+  document.getElementById("gaussian_blur").innerHTML =   controls.gaussianBlurSize;
+
+  // schedule the next one.
+  let delay = 1000/FPS - (Date.now() - begin);
+        setTimeout(processVideo, delay);  
+}
+
+function stopVideoProcessing() {
+  if (src != null && !src.isDeleted()) src.delete();
+  if (dst != null && !dst.isDeleted()) dst.delete();
+  if (dstC1 != null && !dstC1.isDeleted()) dstC1.delete();
+  if (dstC3 != null && !dstC3.isDeleted()) dstC3.delete();
+  if (dstC4 != null && !dstC4.isDeleted()) dstC4.delete();
+  if (frame1 != null && !frame1.isDeleted()) frame1.delete();
+  if (frame2 != null && !frame2.isDeleted()) frame2.delete();
+  if (srcRGB != null && !srcRGB .isDeleted()) srcRGB .delete();
+}
+
+function stopCamera() {
+  if (!streaming) return;
+  stopVideoProcessing();
+  document.getElementById("canvasOutput").getContext("2d").clearRect(0, 0, width, height);
+  video.pause();
+  video.srcObject=null;
+  stream.getVideoTracks()[0].stop();
+  streaming = false;
+}
+
+var stats = null;
+
+var filters = {
+  'passThrough': 'Pass Through',
+  'gray': 'Gray',
+  'hsv': 'HSV',
+  'canny': 'Canny Edge Detection',
+  'inRange': 'In Range',
+  'threshold': 'Threshold',
+  'adaptiveThreshold': 'Adaptive Threshold',
+  'gaussianBlur': 'Gaussian Blurring',
+  'medianBlur': 'Median Blurring',
+  'bilateralFilter': 'Bilateral Filtering',
+  'sobel': 'Sobel Derivatives',
+  'scharr': 'Scharr Derivatives',
+  'laplacian': 'Laplacian Derivatives',
+  'contours': 'Contours',
+  'calcHist': 'Calculation',
+  'equalizeHist': 'Equalization',
+  'backprojection': 'Backprojection',
+  'erosion': 'Erosion',
+  'dilation': 'Dilation',
+  'morphology': 'Morphology',
+};
+
+var filterName = document.getElementById('filterName');
+
+var controls;
+
+function initUI() {
+  stats = new Stats();
+  stats.showPanel(0);
+  document.getElementById('container').appendChild(stats.domElement);
+
+  controls = {
+    filter: 'passThrough',
+    setFilter: function(filter) {
+      this.filter = filter;
+      filterName.innerHTML = filters[filter];
+    },
+    passThrough: function() { this.setFilter('passThrough'); },
+    gray: function() { this.setFilter('gray'); },
+    hsv: function() { this.setFilter('hsv'); },
+    inRange: function() { this.setFilter('inRange'); },
+    inRangeLow: 75,
+    inRangeHigh: 150,
+    threshold: function() { this.setFilter('threshold'); },
+    thresholdValue: 20,
+    adaptiveThreshold: function() { this.setFilter('adaptiveThreshold'); },
+    adaptiveBlockSize: 3,
+    gaussianBlur: function() { this.setFilter('gaussianBlur'); },
+    gaussianBlurSize: 11,
+    medianBlur: function() { this.setFilter('medianBlur'); },
+    medianBlurSize: 2,
+    bilateralFilter: function() { this.setFilter('bilateralFilter'); },
+    bilateralFilterDiameter: 5,
+    bilateralFilterSigma: 75,
+    sobel: function() { this.setFilter('sobel'); },
+    sobelSize: 3,
+    scharr: function() { this.setFilter('scharr'); },
+    laplacian: function() { this.setFilter('laplacian'); },
+    laplacianSize: 3,
+    canny: function() { this.setFilter('canny'); },
+    cannyThreshold1: 150,
+    cannyThreshold2: 300,
+    cannyApertureSize: 3,
+    cannyL2Gradient: false,
+    contours: function() { this.setFilter('contours'); },
+    contoursMode: cv.RETR_CCOMP,
+    contoursMethod: cv.CHAIN_APPROX_SIMPLE,
+    calcHist: function() { this.setFilter('calcHist'); },
+    equalizeHist: function() { this.setFilter('equalizeHist'); },
+    backprojection: function() { this.setFilter('backprojection'); },
+    backprojectionRangeLow: 0,
+    backprojectionRangeHigh: 150,
+    morphology: function () { this.setFilter('morphology'); },
+    morphologyShape: cv.MORPH_RECT,
+    morphologyOp: cv.MORPH_ERODE,
+    morphologySize: 5,
+    morphologyBorderType: cv.BORDER_CONSTANT,
+    dilation: function () { this.setFilter('dilation'); },
+    dilationSize: 5,
+    dilationBorderType: cv.BORDER_CONSTANT,
+    erosion: function () { this.setFilter('erosion'); },
+    erosionSize: 5,
+    erosionBorderType: cv.BORDER_CONSTANT,
+
+  };
+  
+  let gui = new dat.GUI({ autoPlace: false });
+  let guiContainer = document.getElementById('guiContainer');
+  guiContainer.appendChild(gui.domElement);
+  
+  //CK all filters at once  !!!!!!!!!!!!!!!!!!
+  
+  var obj = { add:function(){    
+    existingLines = [];
+    console.log("I delete now all the hand made Drawings"); 
+    }};
+  gui.add(obj, 'add').name('DEL DRAWs');
+  
+  var obj = { add:function(){ 
+   
+    console.log("ALL FITER in a set.."); 
+    }};
+  gui.add(obj, 'add').name('RUN Filter(S)');
+
+  let lastFolder = null;
+  function closeLastFolder(folder) {
+    if (lastFolder != null && lastFolder != folder) {
+      lastFolder.close();
+    }
+    lastFolder = folder;
+  }
+
+  let passThrough = gui.add(controls, 'passThrough').name(filters['passThrough']).onChange(function() {
+    closeLastFolder(null);
+  });
+  
+  let colorConversion = gui.addFolder('Color Conversion');
+  colorConversion.add(controls, 'gray').name(filters['gray']).onChange(function() {
+    closeLastFolder(null);
+  });
+  
+  colorConversion.add(controls, 'hsv').name(filters['hsv']).onChange(function() {
+    closeLastFolder(null);
+  });
+  
+  let inRange = colorConversion.addFolder(filters['inRange']);
+  inRange.domElement.onclick = function() {
+    closeLastFolder(inRange);
+    controls.inRange();
+  };
+  inRange.add(controls, 'inRangeLow', 0, 255, 1).name('lower boundary');
+  inRange.add(controls, 'inRangeHigh', 0, 255, 1).name('higher boundary');
+  
+  // let geometricTransformations = gui.addFolder('Geometric Transformations');
+  // TODO
+  
+  let thresholding = gui.addFolder('Thresholding');
+  
+  let threshold = thresholding.addFolder(filters['threshold']);
+  threshold.domElement.onclick = function() {
+    closeLastFolder(threshold);
+    controls.threshold();
+  };
+  threshold.add(controls, 'thresholdValue', 0, 200, 1).name('threshold value');
+  
+  let adaptiveThreshold = thresholding.addFolder(filters['adaptiveThreshold']);
+  adaptiveThreshold.domElement.onclick = function() {
+    closeLastFolder(adaptiveThreshold);
+    controls.adaptiveThreshold();
+  };
+  adaptiveThreshold.add(controls, 'adaptiveBlockSize', 3, 99, 1).name('block size').onChange(function(value) { if (value % 2 === 0) controls.adaptiveBlockSize = value + 1;});
+  
+  let smoothing = gui.addFolder('Smoothing');
+  
+  let gaussianBlur = smoothing.addFolder(filters['gaussianBlur']);
+  gaussianBlur.domElement.onclick = function() {
+    closeLastFolder(gaussianBlur);
+    controls.gaussianBlur();
+  };
+  gaussianBlur.add(controls, 'gaussianBlurSize', 1, 10, 1).name('kernel size').onChange(function(value) { if (value % 2 === 0) controls.gaussianBlurSize = value + 1;});
+  
+  let medianBlur = smoothing.addFolder(filters['medianBlur']);
+  medianBlur.domElement.onclick = function() {
+    closeLastFolder(medianBlur);
+    controls.medianBlur();
+  };
+  medianBlur.add(controls, 'medianBlurSize', 3, 99, 1).name('kernel size').onChange(function(value) { if (value % 2 === 0) controls.medianBlurSize = value + 1;});
+  
+  let bilateralFilter = smoothing.addFolder(filters['bilateralFilter']);
+  bilateralFilter.domElement.onclick = function() {
+    closeLastFolder(bilateralFilter);
+    controls.bilateralFilter();
+  };
+  bilateralFilter.add(controls, 'bilateralFilterDiameter', 1, 15, 1).name('diameter');
+  bilateralFilter.add(controls, 'bilateralFilterSigma', 1, 255, 1).name('sigma')
+  
+  let morphology = gui.addFolder('Morphology');
+  morphology.domElement.onclick = function() {
+    closeLastFolder(morphology);
+    controls.morphology();
+  };
+  morphology.add(controls, 'morphologyOp', {'MORPH_ERODE': cv.MORPH_ERODE, 'MORPH_DILATE': cv.MORPH_DILATE, 'MORPH_OPEN ': cv.MORPH_OPEN, 'MORPH_CLOSE': cv.MORPH_CLOSE, 'MORPH_GRADIENT': cv.MORPH_GRADIENT, 'MORPH_TOPHAT': cv.MORPH_TOPHAT, 'MORPH_BLACKHAT': cv.MORPH_BLACKHAT}).name('operation');
+  morphology.add(controls, 'morphologyShape', {'MORPH_RECT': cv.MORPH_RECT, 'MORPH_CROSS': cv.MORPH_CROSS, 'MORPH_ELLIPSE': cv.MORPH_ELLIPSE}).name('shape');
+  morphology.add(controls, 'morphologySize', 1, 15, 1).name('kernel size').onChange(function(value) { if (value % 2 === 0) controls.morphologySize = value + 1;});
+  morphology.add(controls, 'morphologyBorderType', {'BORDER_CONSTANT': cv.BORDER_CONSTANT, 'BORDER_REPLICATE': cv.BORDER_REPLICATE, 'BORDER_REFLECT': cv.BORDER_REFLECT, 'BORDER_REFLECT_101': cv.BORDER_REFLECT_101}).name('boarder type');
+
+  let dilation = gui.addFolder('Dilation');
+  dilation.domElement.onclick = function() {
+    closeLastFolder(dilation);
+    controls.dilation();
+  };
+  dilation.add(controls, 'dilationSize', 1, 15, 1).name('kernel size').onChange(function(value) { if (value % 2 === 0) controls.dilationSize = value + 1;});
+  dilation.add(controls, 'dilationBorderType', {'BORDER_CONSTANT': cv.BORDER_CONSTANT, 'BORDER_REPLICATE': cv.BORDER_REPLICATE, 'BORDER_REFLECT': cv.BORDER_REFLECT, 'BORDER_REFLECT_101': cv.BORDER_REFLECT_101}).name('boarder type');
+
+  let erosion = gui.addFolder('Erosion');
+  erosion.domElement.onclick = function() {
+    closeLastFolder(erosion);
+    controls.erosion();
+  };
+  erosion.add(controls, 'erosionSize', 1, 15, 1).name('kernel size').onChange(function(value) { if (value % 2 === 0) controls.erosionSize = value + 1;});
+  erosion.add(controls, 'erosionBorderType', {'BORDER_CONSTANT': cv.BORDER_CONSTANT, 'BORDER_REPLICATE': cv.BORDER_REPLICATE, 'BORDER_REFLECT': cv.BORDER_REFLECT, 'BORDER_REFLECT_101': cv.BORDER_REFLECT_101}).name('boarder type');
+
+
+  let gradients = gui.addFolder('Gradients')
+  let sobel = gradients.addFolder(filters['sobel']);
+  sobel.domElement.onclick = function() {
+    closeLastFolder(sobel);
+    controls.sobel();
+  };
+  sobel.add(controls, 'sobelSize', 3, 19, 1).name('kernel size').onChange(function(value) { if (value % 2 === 0) controls.sobelSize = value + 1;});
+  
+  gradients.add(controls, 'scharr').name(filters['scharr']).onChange(function() {
+    closeLastFolder(null);
+  });
+
+  let laplacian = gradients.addFolder(filters['laplacian']);
+  laplacian.domElement.onclick = function() {
+    closeLastFolder(laplacian);
+    controls.laplacian();
+  };
+  laplacian.add(controls, 'laplacianSize', 1, 19, 1).name('kernel size').onChange(function(value) { if (value % 2 === 0) controls.laplacianSize = value + 1;});
+
+  let canny = gui.addFolder(filters['canny']);
+  canny.domElement.onclick = function() {
+    closeLastFolder(canny);
+    controls.canny();    
+  };
+  canny.add(controls, 'cannyThreshold1', 1, 500, 1).name('threshold1');
+  canny.add(controls, 'cannyThreshold2', 1, 500, 1).name('threshold2');
+  canny.add(controls, 'cannyApertureSize', 3, 7, 1).name('aperture size').onChange(function(value) { if (value % 2 === 0) controls.cannyApertureSize = value + 1;});
+  canny.add(controls, 'cannyL2Gradient').name('l2 gradient');
+
+  let contours = gui.addFolder(filters['contours']);
+  contours.domElement.onclick = function() {
+    closeLastFolder(contours);
+    controls.contours();
+  };
+  contours.add(controls, 'contoursMode', {'RETR_EXTERNAL': cv.RETR_EXTERNAL, 'RETR_LIST': cv.RETR_LIST, 'RETR_CCOMP': cv.RETR_CCOMP, 'RETR_TREE': cv.RETR_TREE}).name('mode');
+  contours.add(controls, 'contoursMethod', {'CHAIN_APPROX_NONE': cv.CHAIN_APPROX_NONE, 'CHAIN_APPROX_SIMPLE': cv.CHAIN_APPROX_SIMPLE, 'CHAIN_APPROX_TC89_L1': cv.CHAIN_APPROX_TC89_L1, 'CHAIN_APPROX_TC89_KCOS': cv.CHAIN_APPROX_TC89_KCOS}).name('method');
+  
+  let histograms = gui.addFolder('Histograms');
+  histograms.add(controls, 'calcHist').name(filters['calcHist']).onChange(function() {
+    closeLastFolder(null);
+  })
+  histograms.add(controls, 'equalizeHist').name(filters['equalizeHist']).onChange(function() {
+    closeLastFolder(null);
+  });
+  
+  let backprojection = histograms.addFolder(filters['backprojection']);
+  backprojection.domElement.onclick = function() {
+    closeLastFolder(backprojection);
+    controls.backprojection();
+  };
+  backprojection.add(controls, 'backprojectionRangeLow', 0, 255, 1).name('range low');
+  backprojection.add(controls, 'backprojectionRangeHigh', 0, 255, 1).name('range high');
+  
+}
+
+function opencvIsReady() {
+  console.log('OpenCV.js is ready');
+  initUI();
+  startCamera();
+}
+
+// Draw with MOUSE - https://stackoverflow.com/questions/49885020/drawing-a-straight-line-using-mouse-events-on-canvas-in-javascript
+
+function draw() {
+				//ctx.fillStyle = "#333333";
+				//ctx.fillRect(0,0,canvasWidth,canvasHeight);				
+				//ctx.strokeStyle = "black";
+				//ctx.lineWidth = 2;
+				//ctx.beginPath();
+				
+				for (var i = 0; i < existingLines.length; ++i) {
+					var line = existingLines[i];
+					//ctx.moveTo(line.startX,line.startY);
+					//ctx.lineTo(line.endX,line.endY);
+                    //console.log("draw() / line.startX= " + line.startX.toFixed(1) +  " line.startY= " + line.startY.toFixed(1)  + " line.endX= " + line.endX.toFixed(1) + " line.endY= " + line.endY.toFixed(1)  );
+				}
+				
+				ctx.stroke();
+				
+				if (isDrawing) {
+					//ctx.strokeStyle = "darkred";
+					//ctx.lineWidth = 3;
+					//ctx.beginPath();
+					//ctx.moveTo(startX,startY);
+					//ctx.lineTo(mouseX,mouseY);
+					//ctx.stroke();
+				}
+}
+			
+function onmousedown(e) {
+				if (hasLoaded && e.button === 0) {
+					if (!isDrawing) {
+						startX = e.clientX - bounds.left;
+						startY = e.clientY - bounds.top;						
+						isDrawing = true;
+					}					
+					draw();
+				}
+}
+			
+function onmouseup(e) {
+				if (hasLoaded && e.button === 0) {
+					if (isDrawing) {
+						existingLines.push({
+							startX: startX,
+							startY: startY,
+							endX: mouseX,
+							endY: mouseY
+						});						
+						isDrawing = false;
+					}					
+					draw();
+				}
+}
+			
+function onmousemove(e) {
+				if (hasLoaded) {
+					mouseX = e.clientX - bounds.left;
+					mouseY = e.clientY - bounds.top;					
+					if (isDrawing) {
+						draw();
+					}
+				}
+}
+			
+window.onload = function() {
+				canvas = document.getElementById("canvasOriginal");
+				canvas.width = canvasWidth;
+				canvas.height = canvasHeight;
+				canvas.onmousedown = onmousedown;
+				canvas.onmouseup = onmouseup;
+				canvas.onmousemove = onmousemove;				
+				bounds = canvas.getBoundingClientRect();
+				ctx = canvas.getContext("2d");
+				hasLoaded = true;				
+				draw();
+}
+
+
+		</script>
+
+	</body>
+</html>
