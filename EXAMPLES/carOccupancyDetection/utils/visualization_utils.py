@@ -701,6 +701,7 @@ def visualize_boxes_and_labels_on_image_array(
     classes,
     scores,
     category_index,
+    WriteSinglePic2File,  # ckoss
     instance_masks=None,
     instance_boundaries=None,
     keypoints=None,
@@ -754,7 +755,10 @@ def visualize_boxes_and_labels_on_image_array(
     skip_scores: whether to skip score when drawing a single detection
     skip_labels: whether to skip label when drawing a single detection
     skip_track_ids: whether to skip track id when drawing a single detection
-
+    
+    WriteSinglePic2File ( True/False ) /ckoss/
+    - If True we write the detected Picture to a single File
+    
   Returns:
     uint8 numpy array with shape (img_height, img_width, 3) with overlaid boxes.
   """
@@ -813,7 +817,7 @@ def visualize_boxes_and_labels_on_image_array(
 
   # Draw all boxes onto image.
   for box, color in box_to_color_map.items():
-    ymin, xmin, ymax, xmax = box
+    ymin, xmin, ymax, xmax = box    
     if instance_masks is not None:
       draw_mask_on_image_array(
           image,
@@ -836,15 +840,17 @@ def visualize_boxes_and_labels_on_image_array(
       # ckoss -- experiment  - https://stackoverflow.com/questions/53970858/cropping-a-detected-object-on-a-video-with-tensorflow-api-and-opencv
       image_pil = Image.fromarray(np.uint8(image)).convert('RGB') 
       im_width, im_height = image_pil.size
-      (xminn, xmaxx, yminn, ymaxx) = (xmin * im_width, xmax * im_width, ymin * im_height, ymax * im_height)   
-      crop_img=image[int(yminn):int(ymaxx),int(xminn):int(xmaxx)]
-      cv2.imshow('DetectedCAR', cv2.resize(crop_img, (320, 320)))     # ckoss
-      global _cCnt   #https://stackoverflow.com/questions/46018872/accessing-variables-defined-in-enclosing-scope
-      _cCnt += 1
-      newImgPath = './detectedImages/car' + str(_cCnt) + '.jpg' 
-      #print('new filename: ' +  newImgPath)
-      cv2.imwrite(newImgPath,cv2.resize(crop_img, (320, 320)))
+      (xminn, xmaxx, yminn, ymaxx) = (xmin * im_width, xmax * im_width, ymin * im_height, ymax * im_height)  
+      crop_img=image[int(yminn):int(ymaxx),int(xminn):int(xmaxx)]  
       
+      
+      if WriteSinglePic2File:
+        cv2.imshow('Write PIC 2 File', cv2.resize(crop_img, (320, 320)))     # ckoss
+        global _cCnt   #https://stackoverflow.com/questions/46018872/accessing-variables-defined-in-enclosing-scope
+        _cCnt += 1
+        newImgPath = './detectedImages/car' + str(_cCnt) + '.jpg' 
+        #print('new filename: ' +  newImgPath)
+        cv2.imwrite(newImgPath,cv2.resize(crop_img, (320, 320)))     #  <<<<---- WRITE THE SINGLE PIC TO folder
       
       draw_bounding_box_on_image_array(
         image,
@@ -863,11 +869,13 @@ def visualize_boxes_and_labels_on_image_array(
           color= color,
           radius= line_thickness /.2,
           use_normalized_coordinates= use_normalized_coordinates)
+      return crop_img    #  ckoss  - original image   
+         
+  return None    #  ckoss  - original image
   
 #-------------------- ck / ckoss - endn ---------------------------------------------
                
   
-  return image
 
 
 def add_cdf_image_summary(values, name):
