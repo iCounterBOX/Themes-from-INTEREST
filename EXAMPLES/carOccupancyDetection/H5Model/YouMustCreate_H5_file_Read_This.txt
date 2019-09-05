@@ -1,0 +1,4 @@
+This ist step c_carOccupancy_createCNNmodel_H5_V1.py
+This app is creating this file!!
+I cannot store this here...190 MB is too big...and github only allow to store max 25 MB files
+
