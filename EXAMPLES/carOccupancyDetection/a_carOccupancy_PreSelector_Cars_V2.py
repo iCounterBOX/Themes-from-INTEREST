@@ -15,7 +15,7 @@
 
 """
 
-
+import platform
 import numpy as np
 import os
 import six.moves.urllib as urllib
@@ -26,8 +26,15 @@ import cv2
 from utils import label_map_util
 from utils import visualization_utils as vis_util
 
+print("V E R S I O - I N F O:")
+print("OpenCV Version: {}".format(cv2.__version__))
+print("Python Version: " + platform.python_version())
+print("Numpy Version: " +  np.__version__)
+print("TensorFlow Version: " +  tf.__version__)
+
+
 # Define the video stream
-cap = cv2.VideoCapture('./video/carsInFront.mp4')
+cap = cv2.VideoCapture('./video/carsInFront2.mp4')
 
 # What model to download.
 # Models can bee found here: https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md

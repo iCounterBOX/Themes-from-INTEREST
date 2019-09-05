@@ -32,7 +32,7 @@ IMG_SIZE = 800
 
 directory = './detectedImages/'
 
-_cCnt = 0
+_cCnt = 2000  # !!!!!!!!! Offset depends on our RUNs before
 
 
 # now let's initialize the list of reference point
@@ -67,17 +67,12 @@ def shape_selection(event, x, y, flags, param):
         #https://stackoverflow.com/questions/23720875/how-to-draw-a-rectangle-around-a-region-of-interest-in-python
         print("x1,y1 = %s" %str( ref_point[0])  + " x2,y2 = %s" %str( ref_point[1]))
 
-
-
-
-
-
 # We start to load just ONE picture...and in a loop we just set our ROI-Frame
 
 cv2.namedWindow("carOccupancy")
 cv2.setMouseCallback("carOccupancy", shape_selection)
             
-picPath = os.path.join(directory, 'car162.jpg')
+picPath = os.path.join(directory, 'car45.jpg')  # toDo Fehlermeldung wenn dieses pic nicht existiert
 myPic = cv2.imread(picPath,0)            
 myPic = cv2.resize(myPic, (IMG_SIZE, IMG_SIZE) )
 clone =  myPic.copy()

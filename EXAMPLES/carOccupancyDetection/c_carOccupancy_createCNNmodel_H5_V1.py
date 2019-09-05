@@ -1,42 +1,21 @@
-#!/usr/bin/env python
-# coding: utf-8
 
-# <img src="https://camo.githubusercontent.com/cc5541fa8bc6f822cb8d5b4261a23f20ec8321f4/68747470733a2f2f757365722d696d616765732e67697468756275736572636f6e74656e742e636f6d2f373036353430312f33393131393438362d34373138653338362d343665632d313165382d396663332d3532353061343965663537302e706e67">
-# 
 # Dieses Hier mal in DER variante machen: https://www.youtube.com/watch?v=j-3vuBynnOE
 #
-# ---
+# Convolutional network configuration - create a deep network which will learn our occupany/cars and then will try to predict them.
 # 
 # CAR OCCUPANCY PREPROCESSOR MODULE
 #
-# CORE: Keras
 #
-# Prerequisite is carOccupancy_Car_PreSelector_V2 - This Module is extracting the Training-Material. 
+# Prerequisite is a_carOccupancy_PreSelector_Cars_V2  & (b_carOccupancy_PreSelector_WindshieldFromCars_V1) - This Module is extracting the Training-Material. 
 # In this case here the single Cars. Pictures from front with 1 person or 2 Persons
 # 
 
 """
-#next time we will normalize better our footage
-    camera_height = 500
-    # flip the frame
-    frame = cv2.flip(frame, 1)
 
-    # rescaling camera output
-    aspect = frame.shape[1] / float(frame.shape[0])
-    res = int(aspect * camera_height) # landscape orientation - wide image
-    frame = cv2.resize(frame, (res, camera_height))
-    # add rectangle
-    cv2.rectangle(frame, (300, 75), (650, 425), (0, 255, 0), 2)
-    # show the frame
-    cv2.imshow("Capturing frames", frame)
-    # # Now crop ROI from the frames, resize it to `399*399` and persist them to
 
 """
 
 # Import necessary libraries:
-
-
-
 
 import os
 import random
@@ -148,8 +127,7 @@ y = to_categorical(y, num_classes=len(class_names))
 print(y.shape)
 
 
-# ## Convolutional network configuration
-# Let's create a deep network which will learn our occupany/cars and then will try to predict them.
+# Convolutional network configuration - create a deep network which will learn our occupany/cars and then will try to predict them.
 
 
 from keras.models import Sequential
@@ -207,42 +185,25 @@ def build_model(conv_1_drop=conv_1_drop, conv_2_drop=conv_2_drop,
     return model
 
 
-# In[57]:
 
 
 import numpy as np
 np.random.seed(1) # for reproducibility
-
 # model with base parameters
 model = build_model()
-
 model.summary()
 
-
-# In[58]:
-
-
 epochs = 20
-
-
-# In[59]:
-
-
 model.fit(X, y, epochs=epochs)
 
 
-# We have just created and trained our first deep network model 🎉
+# We have just created and trained our first deep network model 🎉  Let's try it!
 # 
-# Let's try it!
-# 
-# ### Predict using our model
-# 
-# First we are going to test individual images:
-
-# In[60]:
+# ### Predict using our model  -  First we are going to test individual images:
 
 
-type_1 = preprocessing.image.load_img('./detectedImages/ONE/car11.jpg',    target_size=(width, height))
+
+type_1 = preprocessing.image.load_img('./detectedImages/ONE/carFW14.jpg',    target_size=(width, height))
 plt.imshow(type_1)
 plt.show()
 
@@ -256,7 +217,7 @@ print('The type predicted is: {}'.format(class_names[np.argmax(predictions)]))
 # In[61]:
 
 
-type_2 = preprocessing.image.load_img('./detectedImages/TWO/car1485.jpg',  target_size=(width, height))
+type_2 = preprocessing.image.load_img('./detectedImages/TWO/carFW1.jpg',  target_size=(width, height))
 plt.imshow(type_2)
 plt.show()
 
