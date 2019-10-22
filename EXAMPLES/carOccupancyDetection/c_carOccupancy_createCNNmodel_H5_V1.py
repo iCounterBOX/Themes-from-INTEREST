@@ -203,7 +203,7 @@ model.fit(X, y, epochs=epochs)
 
 
 
-type_1 = preprocessing.image.load_img('./detectedImages/ONE/carFW14.jpg',    target_size=(width, height))
+type_1 = preprocessing.image.load_img('./detectedImages/winshields/carFW14.jpg',    target_size=(width, height))
 plt.imshow(type_1)
 plt.show()
 
@@ -217,7 +217,7 @@ print('The type predicted is: {}'.format(class_names[np.argmax(predictions)]))
 # In[61]:
 
 
-type_2 = preprocessing.image.load_img('./detectedImages/TWO/carFW1.jpg',  target_size=(width, height))
+type_2 = preprocessing.image.load_img('./detectedImages/winshields/carFW21.jpg',  target_size=(width, height))
 plt.imshow(type_2)
 plt.show()
 
@@ -232,8 +232,9 @@ print('The type predicted is: {}'.format(class_names[np.argmax(predictions)]))
 
 model.summary()
 # 
+#ToDo:
 # You can now export and save your trained model. From now on, you won't need to re-train it. You can just load it and use it for predictions.
-model.save('D:\\PROJECT\\a_UC_vehicleOccupancy\\py\\H5Model\\car_occupancy_detection_front.h5')
+model.save('D:\\ALL_PROJECT\\a_UC_vehicleOccupancy\\py\\H5Model\\car_occupancy_detection_front.h5')
 get_ipython().run_line_magic('pinfo', 'model.save')
 
 

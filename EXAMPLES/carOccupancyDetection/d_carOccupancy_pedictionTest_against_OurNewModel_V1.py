@@ -80,7 +80,8 @@ def shape_selection(event, x, y, flags, param):
 cv2.namedWindow("VIDEO-LOOP")
 cv2.setMouseCallback("VIDEO-LOOP", shape_selection)
         
-cap = cv2.VideoCapture('./video/carsInFront1.mp4')
+cap = cv2.VideoCapture('./video/carsInFront.mp4')
+
 
 frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 print("frame count of our video: " +  str(frameCount) )   

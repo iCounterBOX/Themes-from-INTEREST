@@ -1,6 +1,8 @@
-"""
+'''
  OBJECT DETECTION -   local  V I D E O     &  local cocoInceptionModel  
  CKOSS / 28.08.19 / 20:34
+ 
+              
  
  From a MP4 Video we predict CARS and write those single CAR-Pictures to a Folder
  OFFICIAL TUTORIAL and source
@@ -12,8 +14,14 @@
 
  How To Train an Object Detection Classifier Using TensorFlow 1.5 (GPU) on Windows 10
  https://www.youtube.com/watch?v=Rgpfk6eYxJA
+ 
+ ToDo:
+     If ssd_inception_v2_coco_2017_11_17.tar.gz exist on hdd  skip the download!!
 
-"""
+'''
+
+# ACHTUNG: WIR brauchen hier diese  visualization_utils_ck4Cars.pc
+# von hier: "C:\appl\TensorFlow\models\research\object_detection\utils"  
 
 import platform
 import numpy as np
@@ -21,20 +29,28 @@ import os
 import six.moves.urllib as urllib
 import tarfile
 import tensorflow as tf
-import cv2
+import cv2   # opencv
+
+import sys
+sys.path.append("C:\\appl\\TensorFlow\\models\\research\\")
+sys.path.append("C:\\appl\\TensorFlow\\models\\research\\object_detection\\utils")
 
 from utils import label_map_util
-from utils import visualization_utils as vis_util
+from utils import visualization_utils_ck4Cars as vis_util
 
 print("V E R S I O - I N F O:")
 print("OpenCV Version: {}".format(cv2.__version__))
 print("Python Version: " + platform.python_version())
 print("Numpy Version: " +  np.__version__)
 print("TensorFlow Version: " +  tf.__version__)
+from tensorflow.python.platform import build_info as tf_build_info   # TF 1.9  braucht  CUDA 9.0 und cuDNN v7.05
+print("CUDA Version: " + tf_build_info.cuda_version_number)
+# 9.0 in v1.10.0
+print("cuDNN Version: " + tf_build_info.cudnn_version_number)
 
 
 # Define the video stream
-cap = cv2.VideoCapture('./video/carsInFront2.mp4')
+cap = cv2.VideoCapture('./video/carsInFront.mp4')
 
 # What model to download.
 # Models can bee found here: https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
@@ -52,7 +68,6 @@ PATH_TO_LABELS = os.path.join('data', 'mscoco_label_map.pbtxt')
 # Number of classes to detect
 NUM_CLASSES = 90
 
-print ("we use THIS TensorFlow-Version: " + tf.VERSION )
 
 # ckoss ---------------------------------------------------------
 # Download Model
@@ -145,6 +160,8 @@ with detection_graph.as_default():
                 # Here output the category as string and score to terminal
                 #print([category_index.get(i) for i in classes[0]])
                 #print(scores)                
+                
+                
                 
                 # Visualization of the results of a detection. - search for ckoss visualization_utils.py
                 crop_img = vis_util.visualize_boxes_and_labels_on_image_array(

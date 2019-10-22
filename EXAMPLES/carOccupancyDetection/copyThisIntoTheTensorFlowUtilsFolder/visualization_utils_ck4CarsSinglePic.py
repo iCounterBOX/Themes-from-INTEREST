@@ -38,6 +38,8 @@ from six.moves import range
 from six.moves import zip
 import tensorflow as tf
 
+import cv2 # CK  wir wollen die einzelne BOX ( CAR ) speichern
+
 from object_detection.core import standard_fields as fields
 from object_detection.utils import shape_utils
 
@@ -69,6 +71,7 @@ STANDARD_COLORS = [
     'WhiteSmoke', 'Yellow', 'YellowGreen'
 ]
 
+_cCnt = 0            #ckoss / car counter for the Filename of a single car
 
 def _get_multiplier_for_color_randomness():
   """Returns a multiplier to get semi-random colors from successive indices.
@@ -205,9 +208,12 @@ def draw_bounding_box_on_image(image,
   draw.line([(left, top), (left, bottom), (right, bottom),
              (right, top), (left, top)], width=thickness, fill=color)
   try:
-    font = ImageFont.truetype('arial.ttf', 24)
+    font = ImageFont.truetype('arial.ttf', 8)    # ckoss / box schrift  / original: font = ImageFont.truetype('arial.ttf', 24)
   except IOError:
     font = ImageFont.load_default()
+    
+    
+ 
 
   # If the total height of the display strings added to the top of the bounding
   # box exceeds the top of the image, stack the strings below the bounding box
@@ -577,6 +583,7 @@ def draw_side_by_side_evaluation_image(eval_dict,
         max_boxes_to_draw=max_boxes_to_draw,
         min_score_thresh=min_score_thresh,
         use_normalized_coordinates=use_normalized_coordinates)
+        
     images_with_groundtruth = draw_bounding_boxes_on_image_tensors(
         tf.expand_dims(
             eval_dict[input_data_fields.original_image][indx], axis=0),
@@ -687,21 +694,23 @@ def draw_mask_on_image_array(image, mask, color='red', alpha=0.4):
   np.copyto(image, np.array(pil_image.convert('RGB')))
 
 
+
 def visualize_boxes_and_labels_on_image_array(
     image,
     boxes,
     classes,
     scores,
     category_index,
+    WriteSinglePic2File,  # ckoss
     instance_masks=None,
     instance_boundaries=None,
     keypoints=None,
     track_ids=None,
     use_normalized_coordinates=False,
     max_boxes_to_draw=20,
-    min_score_thresh=.5,
+    min_score_thresh=.8,    # ckoss / Original was 0.5   --- NOW WE WANT 80 % !!!!!!!!!!!!!!!!!!!!!!!
     agnostic_mode=False,
-    line_thickness=4,
+    line_thickness=  0.5,   # ckoss / Original was 4
     groundtruth_box_visualization_color='black',
     skip_scores=False,
     skip_labels=False,
@@ -746,7 +755,10 @@ def visualize_boxes_and_labels_on_image_array(
     skip_scores: whether to skip score when drawing a single detection
     skip_labels: whether to skip label when drawing a single detection
     skip_track_ids: whether to skip track id when drawing a single detection
-
+    
+    WriteSinglePic2File ( True/False ) /ckoss/
+    - If True we write the detected Picture to a single File
+    
   Returns:
     uint8 numpy array with shape (img_height, img_width, 3) with overlaid boxes.
   """
@@ -805,7 +817,7 @@ def visualize_boxes_and_labels_on_image_array(
 
   # Draw all boxes onto image.
   for box, color in box_to_color_map.items():
-    ymin, xmin, ymax, xmax = box
+    ymin, xmin, ymax, xmax = box    
     if instance_masks is not None:
       draw_mask_on_image_array(
           image,
@@ -819,25 +831,51 @@ def visualize_boxes_and_labels_on_image_array(
           color='red',
           alpha=1.0
       )
-    draw_bounding_box_on_image_array(
+      
+# CK / ckoss / 20.10.19   - https://stackoverflow.com/questions/46515358/how-to-get-only-boxes-for-specific-categories-in-tensorflow-object-detection   
+    display_str_list = box_to_display_str_map[box]
+    #if (("car" in display_str_list[0]) or ("bus") in display_str_list[0]):    
+    
+    if ("car" in display_str_list[0] ):
+      # ckoss -- experiment  - https://stackoverflow.com/questions/53970858/cropping-a-detected-object-on-a-video-with-tensorflow-api-and-opencv
+      image_pil = Image.fromarray(np.uint8(image)).convert('RGB') 
+      im_width, im_height = image_pil.size
+      (xminn, xmaxx, yminn, ymaxx) = (xmin * im_width, xmax * im_width, ymin * im_height, ymax * im_height)  
+      crop_img=image[int(yminn):int(ymaxx),int(xminn):int(xmaxx)]  
+      
+      
+      if WriteSinglePic2File:
+        cv2.imshow('Write PIC 2 File', cv2.resize(crop_img, (960, 720)))     # ckoss
+        global _cCnt   #https://stackoverflow.com/questions/46018872/accessing-variables-defined-in-enclosing-scope
+        _cCnt += 1
+        newImgPath = './detectedImages/car' + str(_cCnt) + '.jpg' 
+        #print('new filename: ' +  newImgPath)
+        cv2.imwrite(newImgPath,cv2.resize(crop_img, (960, 720)))     #  <<<<---- WRITE THE SINGLE PIC TO folder
+      
+      draw_bounding_box_on_image_array(
         image,
         ymin,
         xmin,
         ymax,
         xmax,
-        color=color,
-        thickness=line_thickness,
+        color= color,
+        thickness= line_thickness,
         display_str_list=box_to_display_str_map[box],
-        use_normalized_coordinates=use_normalized_coordinates)
-    if keypoints is not None:
-      draw_keypoints_on_image_array(
+        use_normalized_coordinates=use_normalized_coordinates)           
+      if keypoints is not None:
+        draw_keypoints_on_image_array(
           image,
           box_to_keypoints_map[box],
-          color=color,
-          radius=line_thickness / 2,
-          use_normalized_coordinates=use_normalized_coordinates)
-
-  return image
+          color= color,
+          radius= line_thickness /.2,
+          use_normalized_coordinates= use_normalized_coordinates)
+      return crop_img    #  ckoss  - original image   
+         
+  return None    #  ckoss  - original image
+  
+#-------------------- ck / ckoss - endn ---------------------------------------------
+               
+  
 
 
 def add_cdf_image_summary(values, name):

@@ -32,7 +32,7 @@ IMG_SIZE = 800
 
 directory = './detectedImages/'
 
-_cCnt = 2000  # !!!!!!!!! Offset depends on our RUNs before
+_cCnt = 0  # !!!!!!!!! Offset depends on our RUNs before
 
 
 # now let's initialize the list of reference point
@@ -112,6 +112,7 @@ for img in os.listdir(directory):
             if _WriteSinglePic2File:
                 roi = cv2.resize(roi, (400, 300))    
                 _cCnt += 1
+                #ToDo: If windShielFolder not existing - create this folder!!!!
                 newImgPath = './detectedImages/winshields/carFW' + str(_cCnt) + '.jpg' 
                 #print('new filename: ' +  newImgPath)
                 cv2.imwrite(newImgPath, roi)     #  <<<<---- WRITE THE SINGLE PIC TO folder
